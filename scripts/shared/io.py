@@ -82,6 +82,44 @@ def compute_level(hierarchy_id: str) -> int:
     return hierarchy_id.count(".") + 1
 
 
+def load_framework(framework_path: Path) -> tuple[dict, dict[str, dict]]:
+    """Load framework.json and build node lookup dict."""
+    framework = read_json(framework_path)
+    lookup: dict[str, dict] = {}
+
+    def _index(node: dict) -> None:
+        lookup[node["id"]] = node
+        for child in node.get("children", []):
+            _index(child)
+
+    for cat in framework["categories"]:
+        _index(cat)
+    return framework, lookup
+
+
+def rebuild_registry(lookup: dict[str, dict]) -> IdRegistry:
+    """Rebuild IdRegistry from existing framework nodes."""
+    registry = IdRegistry()
+    for node_id in sorted(lookup.keys()):
+        registry.register(node_id)
+    return registry
+
+
+def recount_nodes(framework: dict) -> int:
+    """Recursively count all nodes in framework."""
+    count = 0
+
+    def _count(node: dict) -> None:
+        nonlocal count
+        count += 1
+        for child in node.get("children", []):
+            _count(child)
+
+    for cat in framework["categories"]:
+        _count(cat)
+    return count
+
+
 def get_parent_id(node_id: str) -> str | None:
     """Derive parent ID from a dot-separated node ID.
 
