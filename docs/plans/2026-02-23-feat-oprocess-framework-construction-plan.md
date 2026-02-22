@@ -1,7 +1,7 @@
 ---
 title: "feat: Build O'Process Framework (OPF) Data Files"
 type: feat
-status: active
+status: completed
 date: 2026-02-23
 ---
 
