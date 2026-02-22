@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oprocess.dev/schema/framework.json",
+  "title": "O'Process Framework",
+  "description": "O'Process process classification framework with Blueprint v1.0 five-pillar schema",
+  "type": "object",
+  "properties": {
+    "version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "total_nodes": { "type": "integer", "minimum": 0 },
+    "categories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/process_node" }
+    }
+  },
+  "required": ["version", "generated_at", "total_nodes", "categories"],
+  "$defs": {
+    "localized_text": {
+      "type": "object",
+      "properties": {
+        "zh": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["zh", "en"],
+      "additionalProperties": false
+    },
+    "contract": {
+      "type": "object",
+      "properties": {
+        "preconditions": { "type": "array", "items": { "type": "string" } },
+        "invariants": { "type": "array", "items": { "type": "string" } },
+        "postconditions": { "type": "array", "items": { "type": "string" } },
+        "compensation": { "type": ["string", "null"] }
+      },
+      "required": ["preconditions", "invariants", "postconditions", "compensation"],
+      "additionalProperties": false
+    },
+    "genome": {
+      "type": "object",
+      "properties": {
+        "core_genes": { "type": "array", "items": { "type": "string" } },
+        "context_genes": { "type": "array", "items": { "type": "string" } },
+        "regulatory_genes": { "type": "array", "items": { "type": "string" } },
+        "mutations": { "type": "object" }
+      },
+      "required": ["core_genes", "context_genes", "regulatory_genes", "mutations"],
+      "additionalProperties": false
+    },
+    "temporal": {
+      "type": "object",
+      "properties": {
+        "maturity_half_life": { "type": ["number", "null"] },
+        "automation_trajectory": { "type": ["string", "null"] },
+        "human_ai_boundary": { "type": ["string", "null"] },
+        "obsolescence_risk": { "type": ["string", "null"] },
+        "evolution_log": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["maturity_half_life", "automation_trajectory", "human_ai_boundary", "obsolescence_risk", "evolution_log"],
+      "additionalProperties": false
+    },
+    "process_node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(\\.\\d+)*$|^\\d+\\.0$"
+        },
+        "level": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "parent_id": { "type": ["string", "null"] },
+        "domain": { "enum": ["operating", "management_support"] },
+        "source": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "name": { "$ref": "#/$defs/localized_text" },
+        "description": { "$ref": "#/$defs/localized_text" },
+        "kpi_refs": { "type": "array", "items": { "type": "string" } },
+        "contributes_to_outcomes": { "type": "array", "items": { "type": "string" } },
+        "contract": { "$ref": "#/$defs/contract" },
+        "genome": { "$ref": "#/$defs/genome" },
+        "interference_refs": { "type": "array", "items": { "type": "string" } },
+        "temporal": { "$ref": "#/$defs/temporal" },
+        "provenance_eligible": { "type": "boolean" },
+        "ai_context": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/process_node" }
+        }
+      },
+      "required": [
+        "id", "level", "parent_id", "domain", "source",
+        "name", "description", "kpi_refs",
+        "contributes_to_outcomes", "contract", "genome",
+        "interference_refs", "temporal",
+        "provenance_eligible", "ai_context", "tags", "children"
+      ],
+      "additionalProperties": false
+    },
+    "kpi_entry": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^kpi\\." },
+        "process_id": { "type": "string" },
+        "name": { "$ref": "#/$defs/localized_text" },
+        "unit": { "type": "string" },
+        "formula": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] },
+        "scor_attribute": { "type": ["string", "null"] },
+        "direction": { "type": ["string", "null"] }
+      },
+      "required": ["id", "process_id", "name", "unit"],
+      "additionalProperties": false
+    }
+  }
+}
