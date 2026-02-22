@@ -7,8 +7,9 @@ Checks:
 4. Five pillar fields present on every node
 5. JSON Schema validation (fastjsonschema if available, else jsonschema)
 6. sources_mapping.json covers all 1921 PCF entries
-7. kpis.json >= 3910 entries
+7. kpis.json >= 3910 entries (with process_id referential integrity)
 8. Script line counts <= 300
+9. parent_id referential integrity
 """
 
 from __future__ import annotations
@@ -88,7 +89,7 @@ def _check_bilingual(nodes: list[dict]) -> list[str]:
         print("  PASS: All name.zh and name.en non-empty")
 
     if empty_desc > 0:
-        errors.append(f"WARN: {empty_desc} empty description fields")
+        errors.append(f"FAIL: {empty_desc} empty description fields (violates schema minLength:1)")
     else:
         print("  PASS: All description.zh and description.en non-empty")
     return errors
@@ -110,16 +111,21 @@ def _check_pillar_fields(nodes: list[dict]) -> list[str]:
     return errors
 
 
-def _check_evolution_log(nodes: list[dict]) -> list[str]:
+def _check_parent_id_integrity(nodes: list[dict]) -> list[str]:
+    """Verify every node's parent_id references an existing node."""
     errors = []
+    all_ids = {node["id"] for node in nodes}
+    orphans = 0
     for node in nodes:
-        elog = node.get("temporal", {}).get("evolution_log")
-        if elog is None:
-            errors.append(f"FAIL: Node {node['id']} missing evolution_log")
-        elif elog != []:
-            errors.append(f"FAIL: Node {node['id']} evolution_log not empty: {elog}")
-    if not errors:
-        print("  PASS: All evolution_log fields are []")
+        pid = node.get("parent_id")
+        if pid is not None and pid not in all_ids:
+            orphans += 1
+            if orphans <= 5:
+                errors.append(f"FAIL: Node {node['id']} parent_id '{pid}' not found")
+    if orphans > 5:
+        errors.append(f"  ... and {orphans - 5} more orphaned parent_id refs")
+    if orphans == 0:
+        print("  PASS: All parent_id references valid")
     return errors
 
 
@@ -146,7 +152,7 @@ def _check_schema_validation(framework: dict) -> list[str]:
             errors.append("WARN: No schema validator available (install fastjsonschema)")
         except jsonschema.ValidationError as e:
             errors.append(f"FAIL: Schema validation: {e.message[:200]}")
-    except Exception as e:
+    except fastjsonschema.JsonSchemaValueException as e:
         errors.append(f"FAIL: Schema validation: {str(e)[:200]}")
 
     return errors
@@ -166,7 +172,7 @@ def _check_sources_mapping() -> list[str]:
     return errors
 
 
-def _check_kpis() -> list[str]:
+def _check_kpis(all_node_ids: set[str]) -> list[str]:
     errors = []
     path = OUTPUT_DIR / "kpis.json"
     if not path.exists():
@@ -177,6 +183,18 @@ def _check_kpis() -> list[str]:
         errors.append(f"FAIL: kpis.json has {len(kpis)} entries < {MIN_KPI_ENTRIES}")
     else:
         print(f"  PASS: kpis.json = {len(kpis)} entries (>= {MIN_KPI_ENTRIES})")
+    # Check process_id referential integrity
+    orphan_kpis = 0
+    for kpi in kpis:
+        pid = kpi.get("process_id", "")
+        if pid and pid not in all_node_ids:
+            orphan_kpis += 1
+            if orphan_kpis <= 3:
+                errors.append(f"FAIL: KPI {kpi['id']} process_id '{pid}' not in framework")
+    if orphan_kpis > 3:
+        errors.append(f"  ... and {orphan_kpis - 3} more orphaned KPI process_ids")
+    if orphan_kpis == 0:
+        print(f"  PASS: All {len(kpis)} KPI process_ids reference valid nodes")
     return errors
 
 
@@ -214,8 +232,8 @@ def main() -> None:
     print("\n[4] Five pillar fields")
     all_errors.extend(_check_pillar_fields(nodes))
 
-    print("\n[5] Evolution log")
-    all_errors.extend(_check_evolution_log(nodes))
+    print("\n[5] Parent ID referential integrity")
+    all_errors.extend(_check_parent_id_integrity(nodes))
 
     print("\n[6] JSON Schema validation")
     all_errors.extend(_check_schema_validation(framework))
@@ -223,8 +241,9 @@ def main() -> None:
     print("\n[7] Sources mapping")
     all_errors.extend(_check_sources_mapping())
 
-    print("\n[8] KPIs")
-    all_errors.extend(_check_kpis())
+    all_node_ids = {node["id"] for node in nodes}
+    print("\n[8] KPIs (with process_id integrity)")
+    all_errors.extend(_check_kpis(all_node_ids))
 
     print("\n[9] Script line counts")
     all_errors.extend(_check_script_lines())

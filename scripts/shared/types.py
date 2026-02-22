@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -16,10 +16,6 @@ class LocalizedText:
     def to_dict(self) -> dict[str, str]:
         return {"zh": self.zh, "en": self.en}
 
-    @classmethod
-    def from_dict(cls, d: dict[str, str]) -> LocalizedText:
-        return cls(zh=d.get("zh", ""), en=d.get("en", ""))
-
 
 @dataclass
 class ProcessNode:
@@ -27,7 +23,7 @@ class ProcessNode:
 
     id: str
     level: int
-    parent_id: Optional[str]
+    parent_id: str | None
     domain: str  # "operating" | "management_support"
     source: list[str] = field(default_factory=list)
     name: LocalizedText = field(default_factory=LocalizedText)
@@ -85,32 +81,6 @@ class ProcessNode:
         """Recursively count total nodes including self."""
         return 1 + sum(c.count_nodes() for c in self.children)
 
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> ProcessNode:
-        """Deserialize from dict (e.g., loaded from JSON)."""
-        children_data = d.get("children", [])
-        node = cls(
-            id=d["id"],
-            level=d["level"],
-            parent_id=d.get("parent_id"),
-            domain=d["domain"],
-            source=d.get("source", []),
-            name=LocalizedText.from_dict(d.get("name", {})),
-            description=LocalizedText.from_dict(d.get("description", {})),
-            kpi_refs=d.get("kpi_refs", []),
-            contributes_to_outcomes=d.get("contributes_to_outcomes", []),
-            contract=d.get("contract", cls.__dataclass_fields__["contract"].default_factory()),
-            genome=d.get("genome", cls.__dataclass_fields__["genome"].default_factory()),
-            interference_refs=d.get("interference_refs", []),
-            temporal=d.get("temporal", cls.__dataclass_fields__["temporal"].default_factory()),
-            provenance_eligible=d.get("provenance_eligible", True),
-            ai_context=d.get("ai_context", ""),
-            tags=d.get("tags", []),
-            children=[cls.from_dict(c) for c in children_data],
-        )
-        return node
-
-
 @dataclass
 class KPIEntry:
     """Single KPI metric entry."""
@@ -119,10 +89,10 @@ class KPIEntry:
     process_id: str
     name: LocalizedText = field(default_factory=LocalizedText)
     unit: str = "unknown"
-    formula: Optional[str] = None
-    category: Optional[str] = None
-    scor_attribute: Optional[str] = None
-    direction: Optional[str] = None
+    formula: str | None = None
+    category: str | None = None
+    scor_attribute: str | None = None
+    direction: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {

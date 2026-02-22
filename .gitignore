@@ -24,6 +24,7 @@ Thumbs.db
 
 # Project-specific: copyright content NEVER committed
 oprocess_content.xlsx
+docs/K014749_APQC*.xlsx
 
 # Build artifacts
 *.db

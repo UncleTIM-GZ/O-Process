@@ -9,7 +9,6 @@ Run: python scripts/translate.py [--api]
 
 from __future__ import annotations
 
-import os
 import re
 import sys
 from pathlib import Path
@@ -81,6 +80,19 @@ NOUN_MAP: dict[str, str] = {
 }
 
 
+# Pre-compiled noun patterns (longest first to avoid partial matches)
+_NOUN_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(re.escape(en), re.IGNORECASE), zh)
+    for en, zh in sorted(NOUN_MAP.items(), key=lambda x: -len(x[0]))
+]
+
+# Pre-compiled verb patterns (match only when not surrounded by ASCII letters)
+_VERB_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(rf"(?<![a-zA-Z]){re.escape(en)}(?![a-zA-Z])"), zh)
+    for en, zh in VERB_MAP.items()
+]
+
+
 def _glossary_translate(text: str) -> str:
     """Translate text using glossary-based approach."""
     if not text:
@@ -93,17 +105,17 @@ def _glossary_translate(text: str) -> str:
     result = text
 
     # Replace nouns first (longer phrases first to avoid partial matches)
-    for en, zh in sorted(NOUN_MAP.items(), key=lambda x: -len(x[0])):
-        result = re.sub(re.escape(en), zh, result, flags=re.IGNORECASE)
+    for pattern, zh in _NOUN_PATTERNS:
+        result = pattern.sub(zh, result)
 
-    # Replace leading verbs
-    for en, zh in VERB_MAP.items():
-        result = re.sub(rf"\b{en}\b", zh, result, count=1)
+    # Replace leading verbs (non-CJK boundary instead of \b)
+    for pattern, zh in _VERB_PATTERNS:
+        result = pattern.sub(zh, result, count=1)
 
     return result
 
 
-def _translate_node(node: dict, depth: int = 0) -> int:
+def _translate_node(node: dict) -> int:
     """Recursively translate a node and its children. Returns translated count."""
     count = 0
     name_en = node["name"]["en"]
@@ -122,21 +134,9 @@ def _translate_node(node: dict, depth: int = 0) -> int:
         count += 1
 
     for child in node.get("children", []):
-        count += _translate_node(child, depth + 1)
+        count += _translate_node(child)
 
     return count
-
-
-def _translate_with_api(framework: dict) -> int:
-    """Translate using Anthropic Batch API. Requires ANTHROPIC_API_KEY."""
-    try:
-        import anthropic
-    except ImportError:
-        print("  ERROR: anthropic package not installed. Use: pip install anthropic")
-        return 0
-
-    print("  API translation not yet implemented. Using glossary fallback.")
-    return _translate_with_glossary(framework)
 
 
 def _translate_with_glossary(framework: dict) -> int:
@@ -148,21 +148,13 @@ def _translate_with_glossary(framework: dict) -> int:
 
 
 def main() -> None:
-    use_api = "--api" in sys.argv and os.environ.get("ANTHROPIC_API_KEY")
-
     print(f"Loading framework: {FRAMEWORK_PATH}")
     framework = read_json(FRAMEWORK_PATH)
     node_count = framework.get("total_nodes", 0)
     print(f"  Nodes to translate: {node_count}")
 
-    if use_api:
-        print("Translating with Anthropic Batch API...")
-        translated = _translate_with_api(framework)
-    else:
-        if "--api" in sys.argv:
-            print("  WARNING: --api requested but ANTHROPIC_API_KEY not set")
-        print("Translating with glossary fallback...")
-        translated = _translate_with_glossary(framework)
+    print("Translating with glossary...")
+    translated = _translate_with_glossary(framework)
 
     print(f"  Translated {translated} fields")
     write_json(framework, FRAMEWORK_PATH)
