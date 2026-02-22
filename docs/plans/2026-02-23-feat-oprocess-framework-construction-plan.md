@@ -205,25 +205,25 @@ def write_json(data: Any, output_path: Path) -> None:
 
 ### Functional Requirements
 
-- [ ] `framework.json`: tree structure with ~2400 nodes, all five pillar fields present
-- [ ] `framework-zh.json`: flat array, Chinese only (id, level, parent_id, name, description)
-- [ ] `framework-en.json`: flat array, English only
-- [ ] `kpis.json`: 3910+ KPI entries from PCF Metrics sheet
-- [ ] `sources_mapping.json`: all 1921 PCF entries traceable by hierarchy_id
-- [ ] `schema.json`: JSON Schema (Draft 2020-12) with all five pillar fields defined
-- [ ] `roles.json`, `outcome_graph.json`, `interference_graph.json`, `genome_library.json`: empty placeholder structures
-- [ ] `.gitignore` created with comprehensive rules
+- [x] `framework.json`: tree structure with 2325 nodes, all five pillar fields present
+- [x] `framework-zh.json`: flat array, Chinese only (id, level, parent_id, name, description)
+- [x] `framework-en.json`: flat array, English only
+- [x] `kpis.json`: 3910 KPI entries from PCF Metrics sheet
+- [x] `sources_mapping.json`: all 1921 PCF entries traceable by hierarchy_id
+- [x] `schema.json`: JSON Schema (Draft 2020-12) with all five pillar fields defined
+- [x] `roles.json`, `outcome_graph.json`, `interference_graph.json`, `genome_library.json`: empty placeholder structures
+- [x] `.gitignore` created with comprehensive rules
 
 ### Quality Gates
 
-- [ ] Total framework entries >= 1921 (PCF baseline)
-- [ ] No duplicate IDs in framework.json (enforced by IdRegistry)
-- [ ] All `name.zh`, `name.en`, `description.zh`, `description.en` non-empty
-- [ ] All nodes have: contract, genome, temporal, interference_refs, contributes_to_outcomes fields
-- [ ] `temporal.evolution_log` is `[]` (empty array, ready for append)
-- [ ] JSON Schema validation passes for all output files (fastjsonschema)
-- [ ] Each script file <= 300 lines
-- [ ] KPI entries >= 3910
+- [x] Total framework entries >= 1921 (PCF baseline) — actual: 2325
+- [x] No duplicate IDs in framework.json (enforced by IdRegistry)
+- [x] All `name.zh`, `name.en`, `description.zh`, `description.en` non-empty
+- [x] All nodes have: contract, genome, temporal, interference_refs, contributes_to_outcomes fields
+- [x] `temporal.evolution_log` is `[]` (empty array, ready for append)
+- [x] JSON Schema validation passes for all output files
+- [x] Each script file <= 300 lines
+- [x] KPI entries >= 3910 — actual: 3910
 
 ### Non-Functional Requirements
 
