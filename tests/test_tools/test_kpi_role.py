@@ -9,9 +9,10 @@ from oprocess.db.queries import (
     get_processes_by_level,
     search_processes,
 )
-from oprocess.gateway import PassthroughGateway
+from oprocess.gateway import PassthroughGateway, ToolResponse
 from oprocess.tools.export import build_responsibility_doc
 from oprocess.tools.helpers import (
+    apply_boundary,
     compare_process_nodes,
     responsibilities_to_md,
 )
@@ -186,3 +187,34 @@ class TestIndustryFilter:
         ]
         for r in filtered:
             assert "it" in [t.lower() for t in r["tags"]]
+
+
+class TestApplyBoundary:
+    def test_no_results(self):
+        resp = ToolResponse(result=[])
+        apply_boundary("test", [], resp)
+        assert resp.result == []  # unchanged
+
+    def test_no_score_field(self):
+        results = [{"id": "1.0", "name_zh": "a"}]
+        resp = ToolResponse(result=results)
+        apply_boundary("test", results, resp)
+        assert resp.result == results  # unchanged (LIKE fallback)
+
+    def test_within_boundary(self):
+        results = [
+            {"id": "1.0", "name_zh": "a", "name_en": "A", "score": 0.9},
+            {"id": "1.1", "name_zh": "b", "name_en": "B", "score": 0.8},
+        ]
+        resp = ToolResponse(result=results)
+        apply_boundary("test", results, resp)
+        assert resp.result == results  # unchanged
+
+    def test_outside_boundary(self):
+        results = [
+            {"id": "1.0", "name_zh": "a", "name_en": "A", "score": 0.2},
+        ]
+        resp = ToolResponse(result=results)
+        apply_boundary("test", results, resp)
+        assert "boundary" in resp.result
+        assert resp.result["boundary"]["boundary_triggered"] is True

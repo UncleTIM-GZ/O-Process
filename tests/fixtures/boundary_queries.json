@@ -1,0 +1,12 @@
+[
+  {"query": "量子计算芯片设计", "lang": "zh", "should_trigger_boundary": true},
+  {"query": "火星殖民地建设方案", "lang": "zh", "should_trigger_boundary": true},
+  {"query": "基因编辑治疗白血病", "lang": "zh", "should_trigger_boundary": true},
+  {"query": "法式甜点烘焙技巧", "lang": "zh", "should_trigger_boundary": true},
+  {"query": "足球世界杯赛程安排", "lang": "zh", "should_trigger_boundary": true},
+  {"query": "deep space exploration mission planning", "lang": "en", "should_trigger_boundary": true},
+  {"query": "nuclear fusion reactor design principles", "lang": "en", "should_trigger_boundary": true},
+  {"query": "medieval castle architecture restoration", "lang": "en", "should_trigger_boundary": true},
+  {"query": "underwater coral reef photography techniques", "lang": "en", "should_trigger_boundary": true},
+  {"query": "competitive chess opening strategies", "lang": "en", "should_trigger_boundary": true}
+]
