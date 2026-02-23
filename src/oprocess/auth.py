@@ -8,6 +8,7 @@ When not set, all requests are allowed (stdio mode safe).
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 
@@ -29,7 +30,7 @@ def verify_token(token: str) -> bool:
     expected = get_api_key()
     if not expected:
         return True
-    return token == expected
+    return hmac.compare_digest(token.encode(), expected.encode())
 
 
 class BearerAuthMiddleware:
@@ -47,8 +48,7 @@ class BearerAuthMiddleware:
             await self.app(scope, receive, send)
             return
 
-        api_key = get_api_key()
-        if not api_key:
+        if not get_api_key():
             await self.app(scope, receive, send)
             return
 
@@ -57,7 +57,7 @@ class BearerAuthMiddleware:
 
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
-            if token == api_key:
+            if verify_token(token):
                 await self.app(scope, receive, send)
                 return
 

@@ -110,16 +110,15 @@ class PassthroughGateway(ToolGatewayInterface):
                     response_ms=elapsed_ms,
                     governance_ext=gov_ext,
                 )
-
-        logger.info(
-            "tool.execute",
-            extra={
-                "tool": tool_name,
-                "session_id": self.session_id,
-                "ms": elapsed_ms,
-                "error": error_info,
-            },
-        )
+            logger.info(
+                "tool.execute",
+                extra={
+                    "tool": tool_name,
+                    "session_id": self.session_id,
+                    "ms": elapsed_ms,
+                    "error": error_info,
+                },
+            )
 
         return ToolResponse(
             result=result,
