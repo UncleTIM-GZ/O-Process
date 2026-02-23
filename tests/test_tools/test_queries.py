@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from oprocess.db.queries import (
     build_path_string,
     count_kpis,
@@ -13,6 +15,7 @@ from oprocess.db.queries import (
     get_processes_by_level,
     get_subtree,
     search_processes,
+    validate_lang,
 )
 
 
@@ -147,3 +150,19 @@ class TestLevelQuery:
         ids = {p["id"] for p in procs}
         assert "1.0" in ids
         assert "8.0" in ids
+
+
+class TestValidateLang:
+    def test_valid_zh(self):
+        validate_lang("zh")  # should not raise
+
+    def test_valid_en(self):
+        validate_lang("en")  # should not raise
+
+    def test_invalid_lang_search(self, populated_db):
+        with pytest.raises(ValueError, match="Invalid language"):
+            search_processes(populated_db, "test", lang="fr")
+
+    def test_invalid_lang_direct(self):
+        with pytest.raises(ValueError, match="Invalid language"):
+            validate_lang("french")

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import sqlite3
 
+from fastmcp.exceptions import ToolError
+
 from oprocess.db.queries import (
     build_path_string,
     get_ancestor_chain,
     get_process,
+    validate_lang,
 )
 from oprocess.gateway import ToolResponse
 from oprocess.governance.boundary import check_boundary
@@ -52,6 +55,7 @@ def build_search_provenance(
     derivation_rule: str = "semantic_match",
 ) -> list[dict]:
     """Build provenance chain from search results."""
+    validate_lang(lang)
     chain = ProvenanceChain()
     name_key = f"name_{lang}"
     for r in results:
@@ -71,6 +75,7 @@ def build_hierarchy_provenance(
     lang: str,
 ) -> list[dict]:
     """Build provenance chain from ancestor hierarchy."""
+    validate_lang(lang)
     chain = ProvenanceChain()
     ancestors = get_ancestor_chain(conn, process_id)
     for node in ancestors:
@@ -94,7 +99,8 @@ def compare_process_nodes(
     for pid in ids:
         p = get_process(conn, pid)
         if not p:
-            return {"error": f"Process {pid} not found"}
+            msg = f"Process {pid} not found"
+            raise ToolError(msg)
         processes[pid] = p
 
     comparisons = []

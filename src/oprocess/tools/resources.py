@@ -52,9 +52,10 @@ def register_resources(mcp) -> None:
         try:
             process = get_process(conn, process_id)
             if not process:
-                return _to_json(
-                    {"error": f"Process {process_id} not found"},
-                )
+                return _to_json({
+                    "not_found": process_id,
+                    "message": f"Process {process_id} not found",
+                })
             return _to_json(process)
         finally:
             conn.close()

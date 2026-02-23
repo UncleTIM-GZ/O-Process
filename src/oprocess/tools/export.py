@@ -8,6 +8,7 @@ from oprocess.db.queries import (
     get_kpis_for_process,
     get_process,
     get_subtree,
+    validate_lang,
 )
 
 
@@ -106,6 +107,7 @@ def build_responsibility_doc(
         lang: Language - "zh" or "en".
         role_name: Optional role name for the document title.
     """
+    validate_lang(lang)
     name_key = f"name_{lang}"
     desc_key = f"description_{lang}"
     ids = [pid.strip() for pid in process_ids.split(",")]

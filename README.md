@@ -1,1 +1,110 @@
 # O'Process
+
+AI-native process classification MCP Server. Query 2,325 processes and 3,910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0 + AI-era extensions.
+
+## Quick Start
+
+```bash
+# Install
+uv sync
+
+# Run MCP Server (stdio)
+uv run python -m oprocess.server
+```
+
+## Claude Desktop Configuration
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "oprocess": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "oprocess.server"],
+      "cwd": "/path/to/O-Process"
+    }
+  }
+}
+```
+
+## Tools
+
+7 MCP tools with full input validation (Pydantic `Annotated[..., Field(...)]`):
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `search_process` | Semantic search for process nodes | `query` (1-500 chars), `lang` (zh/en), `limit` (1-50), `level` (1-5) |
+| `get_process_tree` | Get process subtree with children | `process_id` (e.g. "1.0"), `max_depth` (1-5) |
+| `get_kpi_suggestions` | Get KPIs for a process node | `process_id` |
+| `compare_processes` | Compare 2+ process nodes side-by-side | `process_ids` (comma-separated, 2+) |
+| `get_responsibilities` | Generate role responsibilities | `process_id`, `lang`, `output_format` (json/markdown) |
+| `map_role_to_processes` | Map job role to relevant processes | `role_description` (1-500 chars), `lang`, `limit`, `industry` |
+| `export_responsibility_doc` | Export full responsibility document | `process_ids` (1+), `lang`, `role_name` |
+
+All tools return `ToolResponse` JSON with `result`, `provenance_chain`, `session_id`, and `response_ms`.
+
+Invalid inputs raise `ToolError` with descriptive messages.
+
+## Resources
+
+6 MCP resources for direct data access:
+
+| URI | Description |
+|-----|-------------|
+| `oprocess://process/{id}` | Complete process node data |
+| `oprocess://category/list` | All L1 process categories |
+| `oprocess://role/{role_name}` | Process mappings for a role |
+| `oprocess://audit/session/{id}` | Audit log for a session |
+| `oprocess://schema/sqlite` | SQLite schema definition |
+| `oprocess://stats` | Framework statistics |
+
+## Governance-Lite
+
+Transparent governance layer (non-blocking):
+
+- **SessionAuditLog** -- Append-only invocation log per session
+- **BoundaryResponse** -- Structured fallback when semantic confidence is low (threshold: 0.45)
+- **ProvenanceChain** -- Derivation trail attached to every tool response
+
+## Data Sources
+
+| Source | Entries |
+|--------|---------|
+| APQC PCF 7.4 | 1,921 processes |
+| ITIL 4 | 141 nodes |
+| SCOR 12.0 | 164 nodes |
+| AI-era extensions | 99 nodes |
+| **Total** | **2,325 processes** |
+| KPI metrics | 3,910 |
+
+Bilingual: Chinese (zh) + English (en).
+
+## Development
+
+```bash
+# Install dev dependencies
+uv sync
+
+# Lint
+ruff check .
+
+# Test
+pytest
+
+# Full check (lint + test + benchmark)
+ruff check . && pytest && pytest --benchmark-only
+```
+
+## Tech Stack
+
+- **Runtime**: Python 3.10+
+- **MCP Framework**: FastMCP 3.x
+- **Validation**: Pydantic 2.x (`Annotated[..., Field(...)]`)
+- **Database**: SQLite + sqlite-vec (vector search)
+- **Embeddings**: text-embedding-3-small (1536-dim, pre-computed)
+- **Packaging**: uv + hatchling
+
+## License
+
+MIT

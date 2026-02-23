@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+from fastmcp.exceptions import ToolError
+
 from oprocess.db.queries import (
     get_ancestor_chain,
     get_kpis_for_process,
@@ -106,8 +109,8 @@ class TestCompareProcesses:
         assert len(result["comparisons"]) == 3  # C(3,2) = 3
 
     def test_missing_process(self, populated_db):
-        result = compare_process_nodes(populated_db, "1.0,99.99")
-        assert "error" in result
+        with pytest.raises(ToolError, match="Process 99.99 not found"):
+            compare_process_nodes(populated_db, "1.0,99.99")
 
     def test_includes_path(self, populated_db):
         result = compare_process_nodes(populated_db, "1.1,8.5")

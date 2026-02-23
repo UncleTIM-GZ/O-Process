@@ -5,6 +5,15 @@ from __future__ import annotations
 import json
 import sqlite3
 
+_VALID_LANGS = frozenset({"zh", "en"})
+
+
+def validate_lang(lang: str) -> None:
+    """Validate language parameter (defense-in-depth for dynamic SQL)."""
+    if lang not in _VALID_LANGS:
+        msg = f"Invalid language '{lang}'. Must be one of: {sorted(_VALID_LANGS)}"
+        raise ValueError(msg)
+
 
 def get_process(conn: sqlite3.Connection, process_id: str) -> dict | None:
     """Get a single process by ID."""
@@ -64,6 +73,7 @@ def search_processes(
         )
 
     # Fallback: SQL LIKE (no score available)
+    validate_lang(lang)
     col = f"name_{lang}"
     desc_col = f"description_{lang}"
     pattern = f"%{query}%"

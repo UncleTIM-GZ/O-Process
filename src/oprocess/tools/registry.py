@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Annotated, Literal
+
+from fastmcp.exceptions import ToolError
+from pydantic import Field
 
 from oprocess.db.connection import get_connection, init_schema
 from oprocess.db.queries import (
@@ -16,6 +20,7 @@ from oprocess.db.queries import (
     get_processes_by_level,
     get_subtree,
     search_processes,
+    validate_lang,
 )
 from oprocess.gateway import PassthroughGateway, ToolResponse
 from oprocess.tools.export import build_responsibility_doc
@@ -30,6 +35,28 @@ from oprocess.tools.helpers import (
 
 DB_PATH = Path("data/oprocess.db")
 _gateway = PassthroughGateway()
+
+# -- Reusable Annotated type aliases for tool parameters --
+Lang = Annotated[
+    Literal["zh", "en"], Field(description="Language"),
+]
+ProcessId = Annotated[
+    str, Field(pattern=r"^\d+(\.\d+)*$", description="Process ID"),
+]
+ProcessIdList = Annotated[
+    str,
+    Field(
+        pattern=r"^\d+(\.\d+)*(,\s*\d+(\.\d+)*)+$",
+        description="Comma-separated process IDs (2+)",
+    ),
+]
+ProcessIdListOpt = Annotated[
+    str,
+    Field(
+        pattern=r"^\d+(\.\d+)*(,\s*\d+(\.\d+)*)*$",
+        description="Comma-separated process IDs (1+)",
+    ),
+]
 
 
 def _get_conn():
@@ -57,19 +84,18 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def search_process(
-        query: str,
-        lang: str = "zh",
-        limit: int = 10,
-        level: int | None = None,
+        query: Annotated[
+            str, Field(min_length=1, max_length=500),
+        ],
+        lang: Lang = "zh",
+        limit: Annotated[
+            int, Field(ge=1, le=50, description="Max results"),
+        ] = 10,
+        level: Annotated[
+            int | None, Field(ge=1, le=5, description="Level 1-5"),
+        ] = None,
     ) -> str:
-        """Search processes by keyword. Returns matching process nodes.
-
-        Args:
-            query: Search keyword (Chinese or English)
-            lang: Language for search - "zh" or "en"
-            limit: Maximum results to return
-            level: Filter by process level (1-5)
-        """
+        """Search processes by keyword. Returns matching nodes."""
         conn = _get_conn()
         resp = _gateway.execute(
             "search_process",
@@ -90,15 +116,12 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def get_process_tree(
-        process_id: str,
-        max_depth: int = 4,
+        process_id: ProcessId,
+        max_depth: Annotated[
+            int, Field(ge=1, le=5, description="Max depth"),
+        ] = 4,
     ) -> str:
-        """Get a process node with its children tree.
-
-        Args:
-            process_id: Process ID (e.g., "1.0", "8.5.3")
-            max_depth: Maximum depth of children to include
-        """
+        """Get a process node with its children tree."""
         conn = _get_conn()
         resp = _gateway.execute(
             "get_process_tree",
@@ -112,19 +135,16 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def get_kpi_suggestions(
-        process_id: str,
+        process_id: ProcessId,
     ) -> str:
-        """Get KPI suggestions for a process node.
-
-        Args:
-            process_id: Process ID to get KPIs for
-        """
+        """Get KPI suggestions for a process node."""
         conn = _get_conn()
 
         def _get_kpis():
             process = get_process(conn, process_id)
             if not process:
-                return {"error": f"Process {process_id} not found"}
+                msg = f"Process {process_id} not found"
+                raise ToolError(msg)
             kpis = get_kpis_for_process(conn, process_id)
             return {
                 "process": {
@@ -147,13 +167,9 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def compare_processes(
-        process_ids: str,
+        process_ids: ProcessIdList,
     ) -> str:
-        """Compare multiple process nodes.
-
-        Args:
-            process_ids: Comma-separated process IDs (e.g. "1.0,8.0,4.0")
-        """
+        """Compare multiple process nodes."""
         conn = _get_conn()
         resp = _gateway.execute(
             "compare_processes",
@@ -166,23 +182,22 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def get_responsibilities(
-        process_id: str,
-        lang: str = "zh",
-        output_format: str = "json",
+        process_id: ProcessId,
+        lang: Lang = "zh",
+        output_format: Annotated[
+            Literal["json", "markdown"],
+            Field(description="Output format"),
+        ] = "json",
     ) -> str:
-        """Generate role responsibilities for a process node.
-
-        Args:
-            process_id: Process ID to generate responsibilities for
-            lang: Language - "zh" or "en"
-            output_format: Output format - "json" or "markdown"
-        """
+        """Generate role responsibilities for a process node."""
+        validate_lang(lang)
         conn = _get_conn()
 
         def _responsibilities():
             process = get_process(conn, process_id)
             if not process:
-                return {"error": f"Process {process_id} not found"}
+                msg = f"Process {process_id} not found"
+                raise ToolError(msg)
 
             chain = get_ancestor_chain(conn, process_id)
             all_next = get_processes_by_level(
@@ -220,19 +235,20 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def map_role_to_processes(
-        role_description: str,
-        lang: str = "zh",
-        limit: int = 10,
-        industry: str | None = None,
+        role_description: Annotated[
+            str,
+            Field(min_length=1, max_length=500),
+        ],
+        lang: Lang = "zh",
+        limit: Annotated[
+            int, Field(ge=1, le=50, description="Max matches"),
+        ] = 10,
+        industry: Annotated[
+            str | None,
+            Field(max_length=100, description="Industry tag"),
+        ] = None,
     ) -> str:
-        """Map a job role to relevant processes.
-
-        Args:
-            role_description: Description of the job role
-            lang: Language for results - "zh" or "en"
-            limit: Maximum number of process matches
-            industry: Filter by industry tag (e.g. "manufacturing")
-        """
+        """Map a job role to relevant processes."""
         conn = _get_conn()
         resp = _gateway.execute(
             "map_role_to_processes",
@@ -260,17 +276,14 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def export_responsibility_doc(
-        process_ids: str,
-        lang: str = "zh",
-        role_name: str | None = None,
+        process_ids: ProcessIdListOpt,
+        lang: Lang = "zh",
+        role_name: Annotated[
+            str | None,
+            Field(max_length=100, description="Role name"),
+        ] = None,
     ) -> str:
-        """Export a complete responsibility document.
-
-        Args:
-            process_ids: Comma-separated process IDs (e.g. "1.0,8.0")
-            lang: Language - "zh" or "en"
-            role_name: Optional role name for the document title
-        """
+        """Export a complete responsibility document."""
         conn = _get_conn()
         resp = _gateway.execute(
             "export_responsibility_doc",
