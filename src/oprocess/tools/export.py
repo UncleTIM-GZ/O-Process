@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from oprocess.db.queries import (
+    build_path_string,
     get_ancestor_chain,
     get_kpis_for_process,
     get_process,
@@ -71,6 +72,25 @@ def build_responsibility_doc(conn, process_id: str, lang: str) -> dict:
         ])
         for kpi in kpis:
             lines.append(f"- **{kpi[name_key]}** ({kpi.get('unit', '')})")
+
+    # Provenance appendix
+    lines.extend([
+        "",
+        "## 溯源附录" if lang == "zh" else "## Provenance Appendix",
+        "",
+    ])
+    if lang == "zh":
+        lines.append("| 节点 ID | 名称 | 置信度 | 路径 | 推导规则 |")
+    else:
+        lines.append("| Node ID | Name | Confidence | Path | Rule |")
+    lines.append("|---------|------|--------|------|---------|")
+    for node in chain:
+        path = build_path_string(conn, node["id"])
+        confidence = 1.0 if node["id"] == process_id else 0.5
+        lines.append(
+            f"| {node['id']} | {node[name_key]} "
+            f"| {confidence:.2f} | {path} | rule_based |"
+        )
 
     return {
         "markdown": "\n".join(lines),

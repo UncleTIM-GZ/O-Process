@@ -119,6 +119,12 @@ def get_ancestor_chain(
     return chain
 
 
+def build_path_string(conn: sqlite3.Connection, process_id: str) -> str:
+    """Build ancestor path string like '1.0 > 1.1 > 1.1.2'."""
+    chain = get_ancestor_chain(conn, process_id)
+    return " > ".join(n["id"] for n in chain)
+
+
 def count_processes(conn: sqlite3.Connection) -> int:
     """Count total processes."""
     row = conn.execute("SELECT COUNT(*) FROM processes").fetchone()

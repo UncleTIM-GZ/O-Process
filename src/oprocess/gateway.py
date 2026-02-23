@@ -23,7 +23,7 @@ class ToolResponse:
     """Standard response envelope for all tools."""
 
     result: Any
-    provenance_chain: list[str] = field(default_factory=list)
+    provenance_chain: list[dict] = field(default_factory=list)
     session_id: str = ""
     response_ms: int = 0
 

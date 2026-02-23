@@ -20,8 +20,13 @@ from oprocess.db.queries import (
     search_processes,
 )
 from oprocess.gateway import PassthroughGateway, ToolResponse
-from oprocess.governance.boundary import check_boundary
 from oprocess.tools.export import build_responsibility_doc
+from oprocess.tools.helpers import (
+    apply_boundary,
+    build_hierarchy_provenance,
+    build_lookup_provenance,
+    build_search_provenance,
+)
 
 DB_PATH = Path("data/oprocess.db")
 _gateway = PassthroughGateway()
@@ -45,37 +50,6 @@ def _to_json(resp: ToolResponse) -> str:
         ensure_ascii=False,
         indent=2,
     )
-
-
-def _apply_boundary(
-    query: str, results: list[dict], resp: ToolResponse,
-) -> None:
-    """Apply boundary check to search results (mutates resp in-place).
-
-    When results have `score` (vector mode), use real cosine similarity.
-    When results lack `score` (LIKE fallback), skip boundary check.
-    """
-    if not results or "score" not in results[0]:
-        return  # LIKE fallback — no scores, skip boundary
-
-    best_score = results[0]["score"]
-    nearest = [
-        {
-            "id": r["id"],
-            "name_zh": r["name_zh"],
-            "name_en": r["name_en"],
-            "score": r["score"],
-        }
-        for r in results[:3]
-    ]
-    boundary = check_boundary(
-        query, best_score, nearest_valid_nodes=nearest,
-    )
-    if not boundary.is_within_boundary:
-        resp.result = {
-            "results": resp.result,
-            "boundary": boundary.to_dict(),
-        }
 
 
 def register_tools(mcp) -> None:
@@ -106,9 +80,12 @@ def register_tools(mcp) -> None:
             limit=limit,
             level=level,
         )
-        conn.close()
         results = resp.result if isinstance(resp.result, list) else []
-        _apply_boundary(query, results, resp)
+        resp.provenance_chain = build_search_provenance(
+            conn, results, lang,
+        )
+        conn.close()
+        apply_boundary(query, results, resp)
         return _to_json(resp)
 
     @mcp.tool()
@@ -160,6 +137,11 @@ def register_tools(mcp) -> None:
             }
 
         resp = _gateway.execute("get_kpi_suggestions", _get_kpis)
+        process = get_process(conn, process_id)
+        if process:
+            resp.provenance_chain = build_lookup_provenance(
+                conn, process_id, process["name_zh"],
+            )
         conn.close()
         return _to_json(resp)
 
@@ -220,31 +202,33 @@ def register_tools(mcp) -> None:
                 return {"error": f"Process {process_id} not found"}
 
             chain = get_ancestor_chain(conn, process_id)
-            children = get_processes_by_level(conn, process["level"] + 1)
-            child_procs = [
-                c for c in children if c.get("parent_id") == process_id
-            ]
-
-            name_key = f"name_{lang}"
-            desc_key = f"description_{lang}"
-
+            all_next = get_processes_by_level(
+                conn, process["level"] + 1,
+            )
+            nk, dk = f"name_{lang}", f"description_{lang}"
             return {
                 "process": {
                     "id": process["id"],
-                    "name": process[name_key],
-                    "description": process[desc_key],
+                    "name": process[nk],
+                    "description": process[dk],
                 },
                 "hierarchy": [
-                    {"id": n["id"], "name": n[name_key]} for n in chain
+                    {"id": n["id"], "name": n[nk]} for n in chain
                 ],
                 "sub_processes": [
-                    {"id": c["id"], "name": c[name_key]} for c in child_procs
+                    {"id": c["id"], "name": c[nk]}
+                    for c in all_next
+                    if c.get("parent_id") == process_id
                 ],
                 "domain": process["domain"],
             }
 
-        resp = _gateway.execute("get_responsibilities", _responsibilities)
-        resp.provenance_chain = [process_id]
+        resp = _gateway.execute(
+            "get_responsibilities", _responsibilities,
+        )
+        resp.provenance_chain = build_hierarchy_provenance(
+            conn, process_id, lang,
+        )
         conn.close()
         return _to_json(resp)
 
@@ -270,12 +254,12 @@ def register_tools(mcp) -> None:
             lang=lang,
             limit=limit,
         )
-        conn.close()
-        _apply_boundary(
-            role_description,
-            resp.result if isinstance(resp.result, list) else [],
-            resp,
+        results = resp.result if isinstance(resp.result, list) else []
+        resp.provenance_chain = build_search_provenance(
+            conn, results, lang,
         )
+        conn.close()
+        apply_boundary(role_description, results, resp)
         return _to_json(resp)
 
     @mcp.tool()
@@ -297,7 +281,9 @@ def register_tools(mcp) -> None:
             process_id=process_id,
             lang=lang,
         )
-        resp.provenance_chain = [process_id]
+        resp.provenance_chain = build_hierarchy_provenance(
+            conn, process_id, lang,
+        )
         conn.close()
         return _to_json(resp)
 
@@ -309,7 +295,9 @@ def register_tools(mcp) -> None:
             "total_processes": count_processes(conn),
             "total_kpis": count_kpis(conn),
             "version": "0.1.0",
-            "sources": ["APQC PCF 7.4", "ITIL 4", "SCOR 12.0", "AI-era"],
+            "sources": [
+                "APQC PCF 7.4", "ITIL 4", "SCOR 12.0", "AI-era",
+            ],
         }
         conn.close()
         return json.dumps(stats, ensure_ascii=False, indent=2)

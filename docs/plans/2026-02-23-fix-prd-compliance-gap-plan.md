@@ -98,7 +98,7 @@ class BoundaryResponse:
 
 ### 2.1 重构 ProvenanceEntry → ProvenanceNode
 
-- [ ] **修改 `governance/provenance.py`**
+- [x] **修改 `governance/provenance.py`**
   - 重命名 `ProvenanceEntry` → `ProvenanceNode`
   - 字段对齐 PRD：
 
@@ -114,22 +114,22 @@ class ProvenanceNode:
 
 ### 2.2 ProvenanceChain 序列化为 ToolResponse.provenance_chain
 
-- [ ] **修改 `gateway.py:ToolResponse`**
+- [x] **修改 `gateway.py:ToolResponse`**
   - `provenance_chain` 类型从 `list[str]` → `list[dict]`（序列化后的 ProvenanceNode）
 
 ### 2.3 每个 Tool 填充真实溯源链
 
-- [ ] **`search_process`**: 每个匹配结果创建 ProvenanceNode（confidence=score, derivation_rule="semantic_match"）
-- [ ] **`get_process_tree`**: provenance_chain = []（PRD：结构性查询无推导）
-- [ ] **`get_kpi_suggestions`**: 命中节点本身（derivation_rule="direct_lookup"）
-- [ ] **`compare_processes`**: provenance_chain = []（PRD：结构性查询无推导）
-- [ ] **`get_responsibilities`**: 所有参与推导的流程节点（confidence=贡献权重）
-- [ ] **`map_role_to_processes`**: 搜索命中路径（confidence=向量相似度）
-- [ ] **`export_responsibility_doc`**: 完整溯源图
+- [x] **`search_process`**: 每个匹配结果创建 ProvenanceNode（confidence=score, derivation_rule="semantic_match"）
+- [x] **`get_process_tree`**: provenance_chain = []（PRD：结构性查询无推导）
+- [x] **`get_kpi_suggestions`**: 命中节点本身（derivation_rule="direct_lookup"）
+- [x] **`compare_processes`**: provenance_chain = []（PRD：结构性查询无推导）
+- [x] **`get_responsibilities`**: 所有参与推导的流程节点（confidence=贡献权重）
+- [x] **`map_role_to_processes`**: 搜索命中路径（confidence=向量相似度）
+- [x] **`export_responsibility_doc`**: 完整溯源图
 
 ### 2.4 export_responsibility_doc 生成溯源附录
 
-- [ ] **修改 `tools/export.py:build_responsibility_doc()`**
+- [x] **修改 `tools/export.py:build_responsibility_doc()`**
   - 在 Markdown 文档末尾增加「溯源附录」章节
   - 列出所有 ProvenanceNode（ID、名称、置信度、推导规则）
 
@@ -143,14 +143,14 @@ class ProvenanceNode:
 
 ### 2.5 辅助函数 — 构建 path 字符串
 
-- [ ] **新增 `db/queries.py:build_path_string()`**
+- [x] **新增 `db/queries.py:build_path_string()`**
   - 输入 process_id，返回 `'4.0 > 4.4 > 4.4.3'` 格式的路径字符串
   - 复用 `get_ancestor_chain()`
 
 ### 2.6 测试
 
-- [ ] 更新 `tests/test_governance/test_provenance.py` — 适配新 ProvenanceNode
-- [ ] 新增集成测试验证每个 Tool 的 provenance_chain 格式和非空率
+- [x] 更新 `tests/test_governance/test_provenance.py` — 适配新 ProvenanceNode
+- [x] 新增集成测试验证每个 Tool 的 provenance_chain 格式和非空率
 
 **影响文件**: `governance/provenance.py`, `gateway.py`, `tools/registry.py`, `tools/export.py`, `db/queries.py`
 **预计新增/修改**: ~150 行代码，~80 行测试

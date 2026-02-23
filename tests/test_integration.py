@@ -94,7 +94,10 @@ class TestFullToolChain:
 
         # Build provenance
         for r in resp.result:
-            provenance.add(r["id"], "matched", r["name_zh"])
+            provenance.add(
+                r["id"], r["name_zh"], confidence=1.0,
+                path=r["id"], derivation_rule="semantic_match",
+            )
 
         assert len(provenance) > 0
 

@@ -1,32 +1,32 @@
 """ProvenanceChain — track derivation path for tool responses.
 
-Each tool response can carry a provenance chain showing which
-process nodes, KPIs, or data sources were used to produce the result.
+Each tool response carries a provenance chain showing which
+process nodes were used to produce the result, with confidence
+scores and derivation rules (PRD v2.0 Section 5.1).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 
 
 @dataclass
-class ProvenanceEntry:
-    """A single step in a provenance chain."""
+class ProvenanceNode:
+    """A single node in a provenance chain (PRD spec)."""
 
     node_id: str
-    action: str  # e.g., "queried", "matched", "derived", "aggregated"
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
-    details: str = ""
+    name: str
+    confidence: float  # 0.0-1.0
+    path: str  # e.g. '1.0 > 1.1 > 1.1.2'
+    derivation_rule: str  # 'semantic_match' | 'rule_based' | 'direct_lookup'
 
     def to_dict(self) -> dict:
         return {
             "node_id": self.node_id,
-            "action": self.action,
-            "timestamp": self.timestamp,
-            "details": self.details,
+            "name": self.name,
+            "confidence": self.confidence,
+            "path": self.path,
+            "derivation_rule": self.derivation_rule,
         }
 
 
@@ -34,23 +34,34 @@ class ProvenanceChain:
     """Builds and manages a provenance chain for a tool invocation."""
 
     def __init__(self) -> None:
-        self._entries: list[ProvenanceEntry] = []
+        self._nodes: list[ProvenanceNode] = []
 
     def add(
-        self, node_id: str, action: str, details: str = ""
+        self,
+        node_id: str,
+        name: str,
+        confidence: float,
+        path: str,
+        derivation_rule: str,
     ) -> None:
-        """Add an entry to the provenance chain."""
-        self._entries.append(
-            ProvenanceEntry(node_id=node_id, action=action, details=details)
+        """Add a node to the provenance chain."""
+        self._nodes.append(
+            ProvenanceNode(
+                node_id=node_id,
+                name=name,
+                confidence=confidence,
+                path=path,
+                derivation_rule=derivation_rule,
+            )
         )
 
     def to_list(self) -> list[dict]:
         """Export chain as list of dicts."""
-        return [e.to_dict() for e in self._entries]
+        return [n.to_dict() for n in self._nodes]
 
     def node_ids(self) -> list[str]:
         """Get list of node IDs in the chain."""
-        return [e.node_id for e in self._entries]
+        return [n.node_id for n in self._nodes]
 
     def __len__(self) -> int:
-        return len(self._entries)
+        return len(self._nodes)

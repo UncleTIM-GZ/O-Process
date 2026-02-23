@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from oprocess.db.queries import (
+    build_path_string,
     count_kpis,
     count_processes,
     get_ancestor_chain,
@@ -123,6 +124,20 @@ class TestCounts:
 
     def test_kpi_count(self, populated_db):
         assert count_kpis(populated_db) == 2
+
+
+class TestBuildPathString:
+    def test_root_path(self, populated_db):
+        path = build_path_string(populated_db, "1.0")
+        assert path == "1.0"
+
+    def test_child_path(self, populated_db):
+        path = build_path_string(populated_db, "1.1")
+        assert path == "1.0 > 1.1"
+
+    def test_level2_path(self, populated_db):
+        path = build_path_string(populated_db, "8.5")
+        assert path == "8.0 > 8.5"
 
 
 class TestLevelQuery:
