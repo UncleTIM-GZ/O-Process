@@ -1,0 +1,40 @@
+[project]
+name = "oprocess"
+version = "0.1.0"
+description = "AI-native process classification MCP Server"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.0",
+]
+
+[project.optional-dependencies]
+embed = ["openai>=1.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "ruff>=0.5",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.backends"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oprocess"]
+
+[tool.oprocess]
+boundary_threshold = 0.45
+audit_log_enabled = true
+default_language = "zh"
