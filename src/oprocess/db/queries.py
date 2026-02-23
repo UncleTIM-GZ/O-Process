@@ -60,19 +60,11 @@ def search_processes(
     limit: int = 10,
     level: int | None = None,
 ) -> list[dict]:
-    """Search processes — vector search primary, SQL LIKE fallback.
+    """Search processes by text matching (SQL LIKE).
 
-    Returns list of process dicts. When vector search is used,
-    each dict includes a `score` field (cosine similarity 0.0-1.0).
+    Returns list of process dicts sorted by level then id.
+    Vector search is reserved for future OpenAI embedding upgrade.
     """
-    from oprocess.db.vector_search import has_embeddings, vector_search
-
-    if has_embeddings(conn):
-        return vector_search(
-            conn, query, limit=limit, threshold=0.0, level=level,
-        )
-
-    # Fallback: SQL LIKE (no score available)
     validate_lang(lang)
     col = f"name_{lang}"
     desc_col = f"description_{lang}"

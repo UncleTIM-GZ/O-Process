@@ -76,24 +76,19 @@ class TestSearch:
         results = search_processes(populated_db, "xyznonexistent")
         assert len(results) == 0
 
-    def test_search_vector_mode(self, populated_db_with_embeddings):
-        """With embeddings, uses vector search and includes score."""
+    def test_search_with_embeddings_still_uses_like(
+        self, populated_db_with_embeddings,
+    ):
+        """Even with embeddings present, uses LIKE search."""
         results = search_processes(
-            populated_db_with_embeddings, "strategy",
+            populated_db_with_embeddings, "Strategy", lang="en",
         )
-        assert len(results) > 0
-        assert "score" in results[0]
-        assert isinstance(results[0]["score"], float)
+        assert len(results) >= 1
+        # LIKE search has no score field
+        assert "score" not in results[0]
 
-    def test_search_level_filter_like(self, populated_db):
+    def test_search_level_filter(self, populated_db):
         results = search_processes(populated_db, "管理", level=1)
-        for r in results:
-            assert r["level"] == 1
-
-    def test_search_level_filter_vector(self, populated_db_with_embeddings):
-        results = search_processes(
-            populated_db_with_embeddings, "strategy", level=1,
-        )
         for r in results:
             assert r["level"] == 1
 

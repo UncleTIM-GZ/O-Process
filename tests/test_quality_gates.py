@@ -192,6 +192,7 @@ class TestSchemaCompliance:
             "get_responsibilities",
             "map_role_to_processes",
             "export_responsibility_doc",
+            "ping",
         }
         tools = asyncio.run(mcp.list_tools())
         tool_names = {t.name for t in tools}

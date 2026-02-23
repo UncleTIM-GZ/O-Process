@@ -1,5 +1,5 @@
-"""Allow running as: python -m oprocess.server"""
+"""Allow running as: python -m oprocess"""
 
-from oprocess.server import mcp
+from oprocess.server import main
 
-mcp.run()
+main()

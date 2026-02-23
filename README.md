@@ -8,8 +8,14 @@ AI-native process classification MCP Server. Query 2,325 processes and 3,910 KPI
 # Install
 uv sync
 
-# Run MCP Server (stdio)
+# Run MCP Server (stdio — default)
 uv run python -m oprocess.server
+
+# Run with SSE transport
+uv run python -m oprocess.server --transport sse --port 8000
+
+# Run with streamable-http transport
+uv run python -m oprocess.server --transport streamable-http --port 8000
 ```
 
 ## Claude Desktop Configuration
@@ -30,7 +36,7 @@ Add to `claude_desktop_config.json`:
 
 ## Tools
 
-7 MCP tools with full input validation (Pydantic `Annotated[..., Field(...)]`):
+8 MCP tools with full input validation (Pydantic `Annotated[..., Field(...)]`):
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -41,6 +47,7 @@ Add to `claude_desktop_config.json`:
 | `get_responsibilities` | Generate role responsibilities | `process_id`, `lang`, `output_format` (json/markdown) |
 | `map_role_to_processes` | Map job role to relevant processes | `role_description` (1-500 chars), `lang`, `limit`, `industry` |
 | `export_responsibility_doc` | Export full responsibility document | `process_ids` (1+), `lang`, `role_name` |
+| `ping` | Health check — server status and data counts | _(none)_ |
 
 All tools return `ToolResponse` JSON with `result`, `provenance_chain`, `session_id`, and `response_ms`.
 

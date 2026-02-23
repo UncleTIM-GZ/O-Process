@@ -63,6 +63,69 @@ class TestGateway:
         assert len(logs) == 1
 
 
+class TestPingTool:
+    def test_ping_registered(self):
+        import asyncio
+
+        from oprocess.server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        names = {t.name for t in tools}
+        assert "ping" in names
+
+    def test_ping_description(self):
+        import asyncio
+
+        from oprocess.server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        ping = next(t for t in tools if t.name == "ping")
+        assert "health" in ping.description.lower()
+
+
+class TestMultiTransport:
+    def test_valid_transports(self):
+        from oprocess.server import _VALID_TRANSPORTS
+
+        assert "stdio" in _VALID_TRANSPORTS
+        assert "sse" in _VALID_TRANSPORTS
+        assert "streamable-http" in _VALID_TRANSPORTS
+
+    def test_main_exists(self):
+        from oprocess.server import main
+
+        assert callable(main)
+
+    def test_main_stdio_default(self, monkeypatch):
+        """main() with no args → stdio transport."""
+        from unittest.mock import MagicMock
+
+        from oprocess import server
+
+        mock_run = MagicMock()
+        monkeypatch.setattr(server.mcp, "run", mock_run)
+        monkeypatch.setattr("sys.argv", ["oprocess"])
+        server.main()
+        mock_run.assert_called_once_with(transport="stdio")
+
+    def test_main_sse_transport(self, monkeypatch):
+        """main() with --transport sse → sse with host/port."""
+        from unittest.mock import MagicMock
+
+        from oprocess import server
+
+        mock_run = MagicMock()
+        monkeypatch.setattr(server.mcp, "run", mock_run)
+        monkeypatch.setattr(
+            "sys.argv",
+            ["oprocess", "--transport", "sse", "--port", "9000"],
+        )
+        server.main()
+        mock_run.assert_called_once_with(
+            transport="sse", host="127.0.0.1", port=9000,
+        )
+
+
 class TestToolResponse:
     def test_defaults(self):
         resp = ToolResponse(result={"data": 1})

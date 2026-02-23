@@ -6,14 +6,15 @@ All MCP tool functions live here, keeping server.py lean.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Annotated, Literal
 
 from fastmcp.exceptions import ToolError
 from pydantic import Field
 
-from oprocess.db.connection import get_connection, init_schema
+from oprocess.db.connection import get_shared_connection
 from oprocess.db.queries import (
+    count_kpis,
+    count_processes,
     get_ancestor_chain,
     get_kpis_for_process,
     get_process,
@@ -33,7 +34,6 @@ from oprocess.tools.helpers import (
     responsibilities_to_md,
 )
 
-DB_PATH = Path("data/oprocess.db")
 _gateway = PassthroughGateway()
 
 # -- Reusable Annotated type aliases for tool parameters --
@@ -57,12 +57,6 @@ ProcessIdListOpt = Annotated[
         description="Comma-separated process IDs (1+)",
     ),
 ]
-
-
-def _get_conn():
-    conn = get_connection(DB_PATH)
-    init_schema(conn)
-    return conn
 
 
 def _to_json(resp: ToolResponse) -> str:
@@ -96,7 +90,7 @@ def register_tools(mcp) -> None:
         ] = None,
     ) -> str:
         """Search processes by keyword. Returns matching nodes."""
-        conn = _get_conn()
+        conn = get_shared_connection()
         resp = _gateway.execute(
             "search_process",
             search_processes,
@@ -110,7 +104,7 @@ def register_tools(mcp) -> None:
         resp.provenance_chain = build_search_provenance(
             conn, results, lang,
         )
-        conn.close()
+
         apply_boundary(query, results, resp)
         return _to_json(resp)
 
@@ -122,7 +116,7 @@ def register_tools(mcp) -> None:
         ] = 4,
     ) -> str:
         """Get a process node with its children tree."""
-        conn = _get_conn()
+        conn = get_shared_connection()
         resp = _gateway.execute(
             "get_process_tree",
             get_subtree,
@@ -130,7 +124,7 @@ def register_tools(mcp) -> None:
             root_id=process_id,
             max_depth=max_depth,
         )
-        conn.close()
+
         return _to_json(resp)
 
     @mcp.tool()
@@ -138,7 +132,7 @@ def register_tools(mcp) -> None:
         process_id: ProcessId,
     ) -> str:
         """Get KPI suggestions for a process node."""
-        conn = _get_conn()
+        conn = get_shared_connection()
 
         def _get_kpis():
             process = get_process(conn, process_id)
@@ -162,7 +156,7 @@ def register_tools(mcp) -> None:
             resp.provenance_chain = build_lookup_provenance(
                 conn, process_id, process["name_zh"],
             )
-        conn.close()
+
         return _to_json(resp)
 
     @mcp.tool()
@@ -170,14 +164,14 @@ def register_tools(mcp) -> None:
         process_ids: ProcessIdList,
     ) -> str:
         """Compare multiple process nodes."""
-        conn = _get_conn()
+        conn = get_shared_connection()
         resp = _gateway.execute(
             "compare_processes",
             compare_process_nodes,
             conn=conn,
             process_ids=process_ids,
         )
-        conn.close()
+
         return _to_json(resp)
 
     @mcp.tool()
@@ -191,7 +185,7 @@ def register_tools(mcp) -> None:
     ) -> str:
         """Generate role responsibilities for a process node."""
         validate_lang(lang)
-        conn = _get_conn()
+        conn = get_shared_connection()
 
         def _responsibilities():
             process = get_process(conn, process_id)
@@ -230,7 +224,7 @@ def register_tools(mcp) -> None:
         resp.provenance_chain = build_hierarchy_provenance(
             conn, process_id, lang,
         )
-        conn.close()
+
         return _to_json(resp)
 
     @mcp.tool()
@@ -249,7 +243,7 @@ def register_tools(mcp) -> None:
         ] = None,
     ) -> str:
         """Map a job role to relevant processes."""
-        conn = _get_conn()
+        conn = get_shared_connection()
         resp = _gateway.execute(
             "map_role_to_processes",
             search_processes,
@@ -270,7 +264,7 @@ def register_tools(mcp) -> None:
         resp.provenance_chain = build_search_provenance(
             conn, results, lang,
         )
-        conn.close()
+
         apply_boundary(role_description, results, resp)
         return _to_json(resp)
 
@@ -284,7 +278,7 @@ def register_tools(mcp) -> None:
         ] = None,
     ) -> str:
         """Export a complete responsibility document."""
-        conn = _get_conn()
+        conn = get_shared_connection()
         resp = _gateway.execute(
             "export_responsibility_doc",
             build_responsibility_doc,
@@ -301,6 +295,20 @@ def register_tools(mcp) -> None:
                 build_hierarchy_provenance(conn, pid, lang),
             )
         resp.provenance_chain = all_prov
-        conn.close()
+
         return _to_json(resp)
+
+    @mcp.tool()
+    def ping() -> str:
+        """Health check — returns server status and data counts."""
+        conn = get_shared_connection()
+        return json.dumps(
+            {
+                "status": "ok",
+                "server": "O'Process",
+                "total_processes": count_processes(conn),
+                "total_kpis": count_kpis(conn),
+            },
+            ensure_ascii=False,
+        )
 

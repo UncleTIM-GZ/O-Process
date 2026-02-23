@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import atexit
 import sqlite3
 from pathlib import Path
 
 DEFAULT_DB_PATH = Path("data/oprocess.db")
+
+_shared_conn: sqlite3.Connection | None = None
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
@@ -16,6 +19,31 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+def get_shared_connection(
+    db_path: Path | None = None,
+) -> sqlite3.Connection:
+    """Get or create shared SQLite connection (singleton).
+
+    For process-lifetime use by MCP tools/resources.
+    Tests should use get_connection() with tmp_path instead.
+    """
+    global _shared_conn
+    if _shared_conn is not None:
+        return _shared_conn
+    _shared_conn = get_connection(db_path)
+    init_schema(_shared_conn)
+    atexit.register(_close_shared)
+    return _shared_conn
+
+
+def _close_shared() -> None:
+    """Close shared connection on process exit."""
+    global _shared_conn
+    if _shared_conn is not None:
+        _shared_conn.close()
+        _shared_conn = None
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
