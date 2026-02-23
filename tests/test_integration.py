@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from oprocess.db.connection import get_connection
+from oprocess.db.connection import get_connection, init_schema
 from oprocess.db.queries import (
     count_kpis,
     count_processes,
@@ -17,7 +17,11 @@ from oprocess.db.queries import (
     search_processes,
 )
 from oprocess.gateway import PassthroughGateway
-from oprocess.governance.audit import get_session_log, log_invocation
+from oprocess.governance.audit import (
+    get_session_log,
+    hash_input,
+    log_invocation,
+)
 from oprocess.governance.boundary import check_boundary
 from oprocess.governance.provenance import ProvenanceChain
 
@@ -29,7 +33,9 @@ def real_conn() -> sqlite3.Connection:
     """Connect to the real production database."""
     if not REAL_DB.exists():
         pytest.skip("Production database not found at data/oprocess.db")
-    return get_connection(REAL_DB)
+    conn = get_connection(REAL_DB)
+    init_schema(conn)  # Ensure new tables exist (idempotent)
+    return conn
 
 
 class TestRealData:
@@ -112,8 +118,8 @@ class TestFullToolChain:
             real_conn,
             session_id="int-test-1",
             tool_name="search_process",
-            input_params={"query": "人力资本"},
-            output_summary=f"{len(resp.result)} results",
+            input_hash=hash_input({"query": "人力资本"}),
+            lang="zh",
             response_ms=resp.response_ms,
         )
         logs = get_session_log(real_conn, "int-test-1")
@@ -145,7 +151,7 @@ class TestFullToolChain:
             real_conn,
             session_id="int-test-2",
             tool_name="get_process_tree",
-            input_params={"process_id": "4.0"},
+            input_hash=hash_input({"process_id": "4.0"}),
             response_ms=resp.response_ms,
         )
 

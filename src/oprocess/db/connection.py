@@ -67,17 +67,26 @@ CREATE TABLE IF NOT EXISTS process_embeddings (
     FOREIGN KEY (process_id) REFERENCES processes(id)
 );
 
-CREATE TABLE IF NOT EXISTS audit_log (
+CREATE TABLE IF NOT EXISTS session_audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
-    timestamp TEXT NOT NULL,
     tool_name TEXT NOT NULL,
-    input_params TEXT NOT NULL DEFAULT '{}',
-    output_summary TEXT,
+    input_hash TEXT NOT NULL,
+    output_node_ids TEXT,
+    lang TEXT,
     response_ms INTEGER,
-    error TEXT
+    timestamp TEXT NOT NULL,
+    governance_ext TEXT DEFAULT '{}'
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_session ON audit_log(session_id);
-CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_session ON session_audit_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON session_audit_log(timestamp);
+
+CREATE TRIGGER IF NOT EXISTS no_update_audit
+BEFORE UPDATE ON session_audit_log
+BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+
+CREATE TRIGGER IF NOT EXISTS no_delete_audit
+BEFORE DELETE ON session_audit_log
+BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
 """

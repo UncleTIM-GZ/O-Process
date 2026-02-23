@@ -5,40 +5,62 @@ Failures in audit logging MUST NOT affect the main tool flow.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import sqlite3
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
+
+
+def hash_input(params: dict) -> str:
+    """SHA256 hash of input params, truncated to first 16 hex chars."""
+    raw = json.dumps(params, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def log_invocation(
     conn: sqlite3.Connection,
     session_id: str,
     tool_name: str,
-    input_params: dict,
-    output_summary: str | None = None,
+    input_hash: str,
+    output_node_ids: list[str] | None = None,
+    lang: str | None = None,
     response_ms: int | None = None,
-    error: str | None = None,
+    governance_ext: dict | None = None,
 ) -> None:
     """Append an audit log entry. Never raises."""
     try:
+        node_ids_json = (
+            json.dumps(output_node_ids)
+            if output_node_ids is not None
+            else None
+        )
+        gov_json = (
+            json.dumps(governance_ext, ensure_ascii=False)
+            if governance_ext
+            else "{}"
+        )
         conn.execute(
-            """INSERT INTO audit_log
-            (session_id, timestamp, tool_name, input_params,
-             output_summary, response_ms, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO session_audit_log
+            (session_id, tool_name, input_hash, output_node_ids,
+             lang, response_ms, timestamp, governance_ext)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 session_id,
-                datetime.now(timezone.utc).isoformat(),
                 tool_name,
-                json.dumps(input_params, ensure_ascii=False),
-                output_summary,
+                input_hash,
+                node_ids_json,
+                lang,
                 response_ms,
-                error,
+                datetime.now(timezone.utc).isoformat(),
+                gov_json,
             ),
         )
         conn.commit()
     except Exception:
-        pass  # Audit failures must not affect main flow
+        logger.warning("Audit log write failed", exc_info=True)
 
 
 def get_session_log(
@@ -46,7 +68,7 @@ def get_session_log(
 ) -> list[dict]:
     """Retrieve all audit entries for a session."""
     rows = conn.execute(
-        """SELECT * FROM audit_log
+        """SELECT * FROM session_audit_log
         WHERE session_id = ?
         ORDER BY timestamp""",
         (session_id,),
@@ -59,7 +81,7 @@ def get_recent_logs(
 ) -> list[dict]:
     """Retrieve recent audit entries across all sessions."""
     rows = conn.execute(
-        "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?",
+        "SELECT * FROM session_audit_log ORDER BY timestamp DESC LIMIT ?",
         (limit,),
     ).fetchall()
     return [dict(r) for r in rows]

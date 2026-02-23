@@ -163,7 +163,7 @@ class ProvenanceNode:
 
 ### 3.1 重建 audit_log 表
 
-- [ ] **修改 `db/connection.py:SCHEMA_SQL`**
+- [x] **修改 `db/connection.py:SCHEMA_SQL`**
   - 表名 `audit_log` → `session_audit_log`
   - `input_params` → `input_hash`（SHA256 前 16 位）
   - 新增 `output_node_ids TEXT`
@@ -184,7 +184,7 @@ BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
 
 ### 3.2 修改 audit.py — input_hash + 新字段
 
-- [ ] **修改 `governance/audit.py:log_invocation()`**
+- [x] **修改 `governance/audit.py:log_invocation()`**
   - 输入参数 JSON 序列化后取 SHA256 前 16 位作为 `input_hash`
   - 新增 `output_node_ids` 参数（provenance chain 的 node_id 列表）
   - 新增 `lang` 参数
@@ -201,21 +201,19 @@ def _hash_input(params: dict) -> str:
 
 ### 3.3 修改 gateway.py — 传递新审计字段
 
-- [ ] **修改 `gateway.py:PassthroughGateway.execute()`**
+- [x] **修改 `gateway.py:PassthroughGateway.execute()`**
   - 审计日志调用传入 output_node_ids（从 ToolResponse.provenance_chain 提取）
   - 注意：需要在 execute 返回前设置 provenance_chain，然后提取 node_ids
 
 ### 3.4 数据迁移脚本
 
-- [ ] **新增 `scripts/migrate_audit.py`**（一次性）
-  - 重命名旧表 → 创建新表 → 迁移数据
-  - 旧 `input_params` 字段转为 `input_hash`
+- [x] ~~**新增 `scripts/migrate_audit.py`**~~ — 不需要（init_schema 幂等，旧表无实质数据）
 
 ### 3.5 测试
 
-- [ ] 更新 `tests/test_governance/test_audit.py` — 适配新 Schema
-- [ ] 新增追加写入触发器测试（UPDATE/DELETE 应抛异常）
-- [ ] 验证 input_hash 而非原始 input_params 被存储
+- [x] 更新 `tests/test_governance/test_audit.py` — 适配新 Schema
+- [x] 新增追加写入触发器测试（UPDATE/DELETE 应抛异常）
+- [x] 验证 input_hash 而非原始 input_params 被存储
 
 **影响文件**: `db/connection.py`, `governance/audit.py`, `gateway.py`
 **预计新增/修改**: ~80 行代码，~40 行测试

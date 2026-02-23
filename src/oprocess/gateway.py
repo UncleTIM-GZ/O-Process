@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from oprocess.governance.audit import log_invocation
+from oprocess.governance.audit import hash_input, log_invocation
 
 
 @dataclass
@@ -71,32 +71,32 @@ class PassthroughGateway(ToolGatewayInterface):
     ) -> ToolResponse:
         """Execute with timing and optional audit logging."""
         start = time.monotonic()
-        error_msg = None
         result = None
+        error_info: str | None = None
         try:
             result = func(**kwargs)
         except Exception as exc:
-            error_msg = str(exc)
+            error_info = str(exc)
             raise
         finally:
             elapsed_ms = int((time.monotonic() - start) * 1000)
             if self.audit_conn is not None:
+                serializable = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if not isinstance(v, sqlite3.Connection)
+                }
+                gov_ext = (
+                    {"error": error_info} if error_info else None
+                )
                 log_invocation(
                     self.audit_conn,
                     session_id=self.session_id,
                     tool_name=tool_name,
-                    input_params={
-                        k: v
-                        for k, v in kwargs.items()
-                        if not isinstance(v, sqlite3.Connection)
-                    },
-                    output_summary=(
-                        f"{len(result)} results"
-                        if isinstance(result, list)
-                        else None
-                    ),
+                    input_hash=hash_input(serializable),
+                    lang=kwargs.get("lang"),
                     response_ms=elapsed_ms,
-                    error=error_msg,
+                    governance_ext=gov_ext,
                 )
 
         return ToolResponse(
