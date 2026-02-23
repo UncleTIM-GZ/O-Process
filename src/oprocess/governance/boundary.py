@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-DEFAULT_THRESHOLD = 0.45
+from oprocess.config import get_config
 
 
 @dataclass
@@ -35,9 +35,11 @@ class BoundaryResponse:
 def check_boundary(
     query: str,
     best_score: float,
-    threshold: float = DEFAULT_THRESHOLD,
+    threshold: float | None = None,
 ) -> BoundaryResponse:
     """Check if query results are within confidence boundary."""
+    if threshold is None:
+        threshold = get_config()["boundary_threshold"]
     is_within = best_score >= threshold
 
     if is_within:
