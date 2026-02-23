@@ -280,13 +280,13 @@ CREATE TABLE IF NOT EXISTS role_mappings (
 
 ### 5.1 search_process — level 过滤
 
-- [ ] 已在 Phase 1 处理（新增 `level` 参数）
+- [x] 已在 Phase 1 处理（新增 `level` 参数）
 
 ### 5.2 compare_processes — 支持 N 个流程
 
-- [ ] **修改 `tools/registry.py:compare_processes()`**
+- [x] **修改 `tools/registry.py:compare_processes()`**
   - 参数从 `process_id_a, process_id_b` → `process_ids: str`（逗号分隔 ID 列表）
-  - 内部循环对比所有组合
+  - 内部循环对比所有组合（提取到 `helpers.py:compare_process_nodes()`）
 
 ```python
 @mcp.tool()
@@ -298,27 +298,30 @@ def compare_processes(
 
 ### 5.3 export_responsibility_doc — 多流程 + 角色名
 
-- [ ] **修改 `tools/registry.py:export_responsibility_doc()`**
+- [x] **修改 `tools/registry.py:export_responsibility_doc()`**
   - 新增 `role_name: str` 可选参数
   - `process_id` → `process_ids: str`（逗号分隔，支持多流程）
-  - 生成包含多流程的综合岗位说明书
+  - 生成包含多流程的综合岗位说明书（重写 `export.py`）
 
 ### 5.4 get_responsibilities — format 参数
 
-- [ ] **修改 `tools/registry.py:get_responsibilities()`**
-  - 新增 `format: str = "json"` 参数（"json" / "markdown"）
+- [x] **修改 `tools/registry.py:get_responsibilities()`**
+  - 新增 `output_format: str = "json"` 参数（"json" / "markdown"）
+  - markdown 格式提取到 `helpers.py:responsibilities_to_md()`
 
 ### 5.5 map_role_to_processes — industry 过滤
 
-- [ ] **修改 `tools/registry.py:map_role_to_processes()`**
+- [x] **修改 `tools/registry.py:map_role_to_processes()`**
   - 新增 `industry: str | None` 可选参数
   - 通过 tags 字段做行业过滤
 
 ### 5.6 测试
 
-- [ ] 更新现有测试适配新签名
-- [ ] 新增多流程对比测试
-- [ ] 新增多流程导出测试
+- [x] 更新现有测试适配新签名
+- [x] 新增多流程对比测试（TestCompareProcesses: 4 tests）
+- [x] 新增多流程导出测试（TestExportMultiProcess: 4 tests）
+- [x] 新增 responsibilities markdown 测试（TestResponsibilitiesMarkdown: 2 tests）
+- [x] 新增行业过滤测试（TestIndustryFilter: 1 test）
 
 **影响文件**: `tools/registry.py`, `tools/export.py`
 **预计新增/修改**: ~100 行代码，~50 行测试

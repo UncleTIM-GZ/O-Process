@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 
-from oprocess.db.queries import build_path_string, get_ancestor_chain
+from oprocess.db.queries import (
+    build_path_string,
+    get_ancestor_chain,
+    get_process,
+)
 from oprocess.gateway import ToolResponse
 from oprocess.governance.boundary import check_boundary
 from oprocess.governance.provenance import ProvenanceChain
@@ -79,6 +83,70 @@ def build_hierarchy_provenance(
             derivation_rule="rule_based",
         )
     return chain.to_list()
+
+
+def compare_process_nodes(
+    conn: sqlite3.Connection, process_ids: str,
+) -> dict:
+    """Compare multiple process nodes by their IDs (comma-separated)."""
+    ids = [pid.strip() for pid in process_ids.split(",")]
+    processes = {}
+    for pid in ids:
+        p = get_process(conn, pid)
+        if not p:
+            return {"error": f"Process {pid} not found"}
+        processes[pid] = p
+
+    comparisons = []
+    for i, id_a in enumerate(ids):
+        for id_b in ids[i + 1:]:
+            a, b = processes[id_a], processes[id_b]
+            comparisons.append({
+                "pair": [id_a, id_b],
+                "same_parent": a.get("parent_id") == b.get("parent_id"),
+                "same_domain": a.get("domain") == b.get("domain"),
+                "same_level": a.get("level") == b.get("level"),
+            })
+
+    return {
+        "processes": {
+            pid: {
+                **p,
+                "path": [n["id"] for n in get_ancestor_chain(conn, pid)],
+            }
+            for pid, p in processes.items()
+        },
+        "comparisons": comparisons,
+    }
+
+
+def responsibilities_to_md(data: dict, lang: str) -> str:
+    """Convert responsibilities data dict to markdown string."""
+    p = data["process"]
+    lines = [
+        f"# {p['name']}",
+        "",
+        f"**ID**: {p['id']}",
+        f"**Domain**: {data['domain']}",
+        "",
+        "## 描述" if lang == "zh" else "## Description",
+        "",
+        p["description"],
+        "",
+        "## 层级" if lang == "zh" else "## Hierarchy",
+        "",
+    ]
+    for node in data["hierarchy"]:
+        lines.append(f"- {node['id']} {node['name']}")
+    if data["sub_processes"]:
+        lines.extend([
+            "",
+            "## 子流程" if lang == "zh" else "## Sub-processes",
+            "",
+        ])
+        for sp in data["sub_processes"]:
+            lines.append(f"- {sp['id']} {sp['name']}")
+    return "\n".join(lines)
 
 
 def build_lookup_provenance(

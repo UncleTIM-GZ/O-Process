@@ -22,18 +22,17 @@ def render_children(
             render_children(child["children"], lines, name_key, depth + 1)
 
 
-def build_responsibility_doc(conn, process_id: str, lang: str) -> dict:
-    """Build a full responsibility markdown document for a process."""
+def _build_single_doc(
+    conn, process_id: str, lang: str, name_key: str, desc_key: str,
+) -> tuple[list[str], int]:
+    """Build markdown lines for a single process. Returns (lines, kpi_count)."""
     process = get_process(conn, process_id)
     if not process:
-        return {"error": f"Process {process_id} not found"}
+        return [f"Process {process_id} not found."], 0
 
     chain = get_ancestor_chain(conn, process_id)
     subtree = get_subtree(conn, process_id, max_depth=3)
     kpis = get_kpis_for_process(conn, process_id)
-
-    name_key = f"name_{lang}"
-    desc_key = f"description_{lang}"
 
     lines = [
         f"# {process[name_key]}",
@@ -49,11 +48,7 @@ def build_responsibility_doc(conn, process_id: str, lang: str) -> dict:
         indent = "  " * (node["level"] - 1)
         lines.append(f"{indent}- {node['id']} {node[name_key]}")
 
-    lines.extend([
-        "",
-        "## 描述" if lang == "zh" else "## Description",
-        "",
-    ])
+    lines.extend(["", "## 描述" if lang == "zh" else "## Description", ""])
     lines.append(process[desc_key])
 
     if subtree and subtree.get("children"):
@@ -71,7 +66,9 @@ def build_responsibility_doc(conn, process_id: str, lang: str) -> dict:
             "",
         ])
         for kpi in kpis:
-            lines.append(f"- **{kpi[name_key]}** ({kpi.get('unit', '')})")
+            lines.append(
+                f"- **{kpi[name_key]}** ({kpi.get('unit', '')})",
+            )
 
     # Provenance appendix
     lines.extend([
@@ -92,8 +89,48 @@ def build_responsibility_doc(conn, process_id: str, lang: str) -> dict:
             f"| {confidence:.2f} | {path} | rule_based |"
         )
 
+    return lines, len(kpis)
+
+
+def build_responsibility_doc(
+    conn,
+    process_ids: str,
+    lang: str,
+    role_name: str | None = None,
+) -> dict:
+    """Build a full responsibility markdown document.
+
+    Args:
+        conn: Database connection.
+        process_ids: Single or comma-separated process IDs (e.g. "1.0,8.0").
+        lang: Language - "zh" or "en".
+        role_name: Optional role name for the document title.
+    """
+    name_key = f"name_{lang}"
+    desc_key = f"description_{lang}"
+    ids = [pid.strip() for pid in process_ids.split(",")]
+
+    all_lines: list[str] = []
+    total_kpis = 0
+
+    if role_name:
+        all_lines.extend([
+            f"# {'岗位说明书' if lang == 'zh' else 'Role Description'}"
+            f": {role_name}",
+            "",
+        ])
+
+    for i, pid in enumerate(ids):
+        if i > 0:
+            all_lines.extend(["", "---", ""])
+        lines, kpi_count = _build_single_doc(
+            conn, pid, lang, name_key, desc_key,
+        )
+        all_lines.extend(lines)
+        total_kpis += kpi_count
+
     return {
-        "markdown": "\n".join(lines),
-        "process_id": process_id,
-        "kpi_count": len(kpis),
+        "markdown": "\n".join(all_lines),
+        "process_ids": ids,
+        "kpi_count": total_kpis,
     }

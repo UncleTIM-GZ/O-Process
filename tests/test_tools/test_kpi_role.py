@@ -10,6 +10,11 @@ from oprocess.db.queries import (
     search_processes,
 )
 from oprocess.gateway import PassthroughGateway
+from oprocess.tools.export import build_responsibility_doc
+from oprocess.tools.helpers import (
+    compare_process_nodes,
+    responsibilities_to_md,
+)
 
 
 class TestKPISuggestions:
@@ -82,3 +87,102 @@ class TestExportDoc:
         assert resp.result["kpi_count"] == 1
         assert "制定愿景与战略" in resp.result["markdown"]
         assert resp.session_id == "test"
+
+
+class TestCompareProcesses:
+    def test_two_processes(self, populated_db):
+        result = compare_process_nodes(populated_db, "1.0,8.0")
+        assert "processes" in result
+        assert "1.0" in result["processes"]
+        assert "8.0" in result["processes"]
+        assert len(result["comparisons"]) == 1
+        cmp = result["comparisons"][0]
+        assert cmp["pair"] == ["1.0", "8.0"]
+        assert cmp["same_level"] is True  # both level 1
+
+    def test_three_processes(self, populated_db):
+        result = compare_process_nodes(populated_db, "1.0,8.0,1.1")
+        assert len(result["comparisons"]) == 3  # C(3,2) = 3
+
+    def test_missing_process(self, populated_db):
+        result = compare_process_nodes(populated_db, "1.0,99.99")
+        assert "error" in result
+
+    def test_includes_path(self, populated_db):
+        result = compare_process_nodes(populated_db, "1.1,8.5")
+        assert "path" in result["processes"]["1.1"]
+        assert result["processes"]["1.1"]["path"] == ["1.0", "1.1"]
+
+
+class TestResponsibilitiesMarkdown:
+    def test_format_markdown(self, populated_db):
+        data = {
+            "process": {
+                "id": "1.0",
+                "name": "制定愿景与战略",
+                "description": "为组织确立方向和愿景",
+            },
+            "hierarchy": [{"id": "1.0", "name": "制定愿景与战略"}],
+            "sub_processes": [{"id": "1.1", "name": "定义业务概念"}],
+            "domain": "operating",
+        }
+        md = responsibilities_to_md(data, "zh")
+        assert "# 制定愿景与战略" in md
+        assert "## 描述" in md
+        assert "## 子流程" in md
+        assert "1.1 定义业务概念" in md
+
+    def test_format_en(self, populated_db):
+        data = {
+            "process": {
+                "id": "1.0",
+                "name": "Develop Vision",
+                "description": "Establish direction",
+            },
+            "hierarchy": [{"id": "1.0", "name": "Develop Vision"}],
+            "sub_processes": [],
+            "domain": "operating",
+        }
+        md = responsibilities_to_md(data, "en")
+        assert "## Description" in md
+        assert "## Sub-processes" not in md  # empty
+
+
+class TestExportMultiProcess:
+    def test_single_process(self, populated_db):
+        result = build_responsibility_doc(populated_db, "1.0", "zh")
+        assert "制定愿景与战略" in result["markdown"]
+        assert result["process_ids"] == ["1.0"]
+        assert result["kpi_count"] >= 1
+
+    def test_multi_process(self, populated_db):
+        result = build_responsibility_doc(
+            populated_db, "1.0,8.0", "zh",
+        )
+        assert "制定愿景与战略" in result["markdown"]
+        assert "管理信息技术" in result["markdown"]
+        assert result["process_ids"] == ["1.0", "8.0"]
+        assert "---" in result["markdown"]  # separator
+
+    def test_with_role_name(self, populated_db):
+        result = build_responsibility_doc(
+            populated_db, "1.0", "zh", role_name="CTO",
+        )
+        assert "CTO" in result["markdown"]
+        assert "岗位说明书" in result["markdown"]
+
+    def test_missing_process(self, populated_db):
+        result = build_responsibility_doc(populated_db, "99.99", "zh")
+        assert "not found" in result["markdown"]
+
+
+class TestIndustryFilter:
+    def test_filter_by_tag(self, populated_db):
+        results = search_processes(populated_db, "管理", lang="zh")
+        # Filter for "it" tag
+        filtered = [
+            r for r in results
+            if "it" in [t.lower() for t in r.get("tags", [])]
+        ]
+        for r in filtered:
+            assert "it" in [t.lower() for t in r["tags"]]

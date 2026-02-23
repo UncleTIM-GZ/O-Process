@@ -24,6 +24,8 @@ from oprocess.tools.helpers import (
     build_hierarchy_provenance,
     build_lookup_provenance,
     build_search_provenance,
+    compare_process_nodes,
+    responsibilities_to_md,
 )
 
 DB_PATH = Path("data/oprocess.db")
@@ -145,39 +147,20 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def compare_processes(
-        process_id_a: str,
-        process_id_b: str,
+        process_ids: str,
     ) -> str:
-        """Compare two process nodes side by side.
+        """Compare multiple process nodes.
 
         Args:
-            process_id_a: First process ID
-            process_id_b: Second process ID
+            process_ids: Comma-separated process IDs (e.g. "1.0,8.0,4.0")
         """
         conn = _get_conn()
-
-        def _compare():
-            a = get_process(conn, process_id_a)
-            b = get_process(conn, process_id_b)
-            if not a:
-                return {"error": f"Process {process_id_a} not found"}
-            if not b:
-                return {"error": f"Process {process_id_b} not found"}
-
-            chain_a = get_ancestor_chain(conn, process_id_a)
-            chain_b = get_ancestor_chain(conn, process_id_b)
-
-            return {
-                "process_a": a,
-                "process_b": b,
-                "path_a": [n["id"] for n in chain_a],
-                "path_b": [n["id"] for n in chain_b],
-                "same_parent": a.get("parent_id") == b.get("parent_id"),
-                "same_domain": a.get("domain") == b.get("domain"),
-                "same_level": a.get("level") == b.get("level"),
-            }
-
-        resp = _gateway.execute("compare_processes", _compare)
+        resp = _gateway.execute(
+            "compare_processes",
+            compare_process_nodes,
+            conn=conn,
+            process_ids=process_ids,
+        )
         conn.close()
         return _to_json(resp)
 
@@ -185,12 +168,14 @@ def register_tools(mcp) -> None:
     def get_responsibilities(
         process_id: str,
         lang: str = "zh",
+        output_format: str = "json",
     ) -> str:
         """Generate role responsibilities for a process node.
 
         Args:
             process_id: Process ID to generate responsibilities for
             lang: Language - "zh" or "en"
+            output_format: Output format - "json" or "markdown"
         """
         conn = _get_conn()
 
@@ -204,7 +189,7 @@ def register_tools(mcp) -> None:
                 conn, process["level"] + 1,
             )
             nk, dk = f"name_{lang}", f"description_{lang}"
-            return {
+            data = {
                 "process": {
                     "id": process["id"],
                     "name": process[nk],
@@ -220,6 +205,9 @@ def register_tools(mcp) -> None:
                 ],
                 "domain": process["domain"],
             }
+            if output_format == "markdown":
+                return responsibilities_to_md(data, lang)
+            return data
 
         resp = _gateway.execute(
             "get_responsibilities", _responsibilities,
@@ -235,6 +223,7 @@ def register_tools(mcp) -> None:
         role_description: str,
         lang: str = "zh",
         limit: int = 10,
+        industry: str | None = None,
     ) -> str:
         """Map a job role to relevant processes.
 
@@ -242,6 +231,7 @@ def register_tools(mcp) -> None:
             role_description: Description of the job role
             lang: Language for results - "zh" or "en"
             limit: Maximum number of process matches
+            industry: Filter by industry tag (e.g. "manufacturing")
         """
         conn = _get_conn()
         resp = _gateway.execute(
@@ -253,6 +243,14 @@ def register_tools(mcp) -> None:
             limit=limit,
         )
         results = resp.result if isinstance(resp.result, list) else []
+        if industry:
+            results = [
+                r for r in results
+                if industry.lower() in [
+                    t.lower() for t in r.get("tags", [])
+                ]
+            ]
+            resp.result = results
         resp.provenance_chain = build_search_provenance(
             conn, results, lang,
         )
@@ -262,26 +260,34 @@ def register_tools(mcp) -> None:
 
     @mcp.tool()
     def export_responsibility_doc(
-        process_id: str,
+        process_ids: str,
         lang: str = "zh",
+        role_name: str | None = None,
     ) -> str:
-        """Export a complete responsibility document for a process.
+        """Export a complete responsibility document.
 
         Args:
-            process_id: Process ID to export
+            process_ids: Comma-separated process IDs (e.g. "1.0,8.0")
             lang: Language - "zh" or "en"
+            role_name: Optional role name for the document title
         """
         conn = _get_conn()
         resp = _gateway.execute(
             "export_responsibility_doc",
             build_responsibility_doc,
             conn=conn,
-            process_id=process_id,
+            process_ids=process_ids,
             lang=lang,
+            role_name=role_name,
         )
-        resp.provenance_chain = build_hierarchy_provenance(
-            conn, process_id, lang,
-        )
+        # Build combined provenance for all processes
+        ids = [pid.strip() for pid in process_ids.split(",")]
+        all_prov: list[dict] = []
+        for pid in ids:
+            all_prov.extend(
+                build_hierarchy_provenance(conn, pid, lang),
+            )
+        resp.provenance_chain = all_prov
         conn.close()
         return _to_json(resp)
 
