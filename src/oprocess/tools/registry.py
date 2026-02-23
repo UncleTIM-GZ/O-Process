@@ -47,6 +47,37 @@ def _to_json(resp: ToolResponse) -> str:
     )
 
 
+def _apply_boundary(
+    query: str, results: list[dict], resp: ToolResponse,
+) -> None:
+    """Apply boundary check to search results (mutates resp in-place).
+
+    When results have `score` (vector mode), use real cosine similarity.
+    When results lack `score` (LIKE fallback), skip boundary check.
+    """
+    if not results or "score" not in results[0]:
+        return  # LIKE fallback — no scores, skip boundary
+
+    best_score = results[0]["score"]
+    nearest = [
+        {
+            "id": r["id"],
+            "name_zh": r["name_zh"],
+            "name_en": r["name_en"],
+            "score": r["score"],
+        }
+        for r in results[:3]
+    ]
+    boundary = check_boundary(
+        query, best_score, nearest_valid_nodes=nearest,
+    )
+    if not boundary.is_within_boundary:
+        resp.result = {
+            "results": resp.result,
+            "boundary": boundary.to_dict(),
+        }
+
+
 def register_tools(mcp) -> None:
     """Register all tool functions on the FastMCP instance."""
 
@@ -55,6 +86,7 @@ def register_tools(mcp) -> None:
         query: str,
         lang: str = "zh",
         limit: int = 10,
+        level: int | None = None,
     ) -> str:
         """Search processes by keyword. Returns matching process nodes.
 
@@ -62,6 +94,7 @@ def register_tools(mcp) -> None:
             query: Search keyword (Chinese or English)
             lang: Language for search - "zh" or "en"
             limit: Maximum results to return
+            level: Filter by process level (1-5)
         """
         conn = _get_conn()
         resp = _gateway.execute(
@@ -71,18 +104,11 @@ def register_tools(mcp) -> None:
             query=query,
             lang=lang,
             limit=limit,
+            level=level,
         )
         conn.close()
-
-        # Boundary check: warn if no results or low confidence
-        best_score = 1.0 if resp.result else 0.0
-        boundary = check_boundary(query, best_score)
-        if not boundary.is_within_boundary:
-            resp.result = {
-                "results": resp.result,
-                "boundary": boundary.to_dict(),
-            }
-
+        results = resp.result if isinstance(resp.result, list) else []
+        _apply_boundary(query, results, resp)
         return _to_json(resp)
 
     @mcp.tool()
@@ -245,6 +271,11 @@ def register_tools(mcp) -> None:
             limit=limit,
         )
         conn.close()
+        _apply_boundary(
+            role_description,
+            resp.result if isinstance(resp.result, list) else [],
+            resp,
+        )
         return _to_json(resp)
 
     @mcp.tool()

@@ -6,6 +6,8 @@ import math
 import sqlite3
 import struct
 
+from oprocess.db.queries import _row_to_process
+
 
 def _unpack_embedding(blob: bytes) -> list[float]:
     """Unpack BLOB to float list."""
@@ -35,41 +37,46 @@ def _embed_query_tfidf(query: str, dim: int = 384) -> list[float]:
     return [v / norm for v in vec]
 
 
+def has_embeddings(conn: sqlite3.Connection) -> bool:
+    """Check if process_embeddings table has data."""
+    row = conn.execute("SELECT COUNT(*) FROM process_embeddings").fetchone()
+    return row[0] > 0
+
+
 def vector_search(
     conn: sqlite3.Connection,
     query: str,
     limit: int = 10,
     threshold: float = 0.0,
+    level: int | None = None,
 ) -> list[dict]:
     """Search processes using vector similarity.
 
-    Returns list of {process_id, score, ...} sorted by score desc.
+    Returns list of full process dicts with added `score` field,
+    sorted by score descending.
     """
     query_vec = _embed_query_tfidf(query)
 
-    rows = conn.execute(
-        """SELECT pe.process_id, pe.embedding,
-                  p.name_zh, p.name_en, p.level, p.domain
-           FROM process_embeddings pe
-           JOIN processes p ON pe.process_id = p.id"""
-    ).fetchall()
+    sql = """SELECT p.*, pe.embedding
+             FROM process_embeddings pe
+             JOIN processes p ON pe.process_id = p.id"""
+    params: list = []
+    if level is not None:
+        sql += " WHERE p.level = ?"
+        params.append(level)
+
+    rows = conn.execute(sql, params).fetchall()
 
     results = []
     for row in rows:
         emb = _unpack_embedding(row["embedding"])
-        # Handle dimension mismatch
         if len(emb) != len(query_vec):
             continue
         score = _cosine_similarity(query_vec, emb)
         if score >= threshold:
-            results.append({
-                "process_id": row["process_id"],
-                "score": round(score, 4),
-                "name_zh": row["name_zh"],
-                "name_en": row["name_en"],
-                "level": row["level"],
-                "domain": row["domain"],
-            })
+            proc = _row_to_process(row)
+            proc["score"] = round(score, 4)
+            results.append(proc)
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:limit]

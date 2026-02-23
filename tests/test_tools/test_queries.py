@@ -56,18 +56,42 @@ class TestGetSubtree:
 
 
 class TestSearch:
-    def test_search_zh(self, populated_db):
+    def test_search_zh_like_fallback(self, populated_db):
+        """Without embeddings, uses SQL LIKE fallback."""
         results = search_processes(populated_db, "愿景", lang="zh")
         assert len(results) >= 1
         assert any(r["id"] == "1.0" for r in results)
+        # LIKE fallback has no score field
+        assert "score" not in results[0]
 
-    def test_search_en(self, populated_db):
+    def test_search_en_like_fallback(self, populated_db):
         results = search_processes(populated_db, "Strategy", lang="en")
         assert len(results) >= 1
 
     def test_search_no_results(self, populated_db):
         results = search_processes(populated_db, "xyznonexistent")
         assert len(results) == 0
+
+    def test_search_vector_mode(self, populated_db_with_embeddings):
+        """With embeddings, uses vector search and includes score."""
+        results = search_processes(
+            populated_db_with_embeddings, "strategy",
+        )
+        assert len(results) > 0
+        assert "score" in results[0]
+        assert isinstance(results[0]["score"], float)
+
+    def test_search_level_filter_like(self, populated_db):
+        results = search_processes(populated_db, "管理", level=1)
+        for r in results:
+            assert r["level"] == 1
+
+    def test_search_level_filter_vector(self, populated_db_with_embeddings):
+        results = search_processes(
+            populated_db_with_embeddings, "strategy", level=1,
+        )
+        for r in results:
+            assert r["level"] == 1
 
 
 class TestKPIs:

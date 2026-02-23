@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 import sqlite3
+import struct
 from pathlib import Path
 
 import pytest
@@ -62,3 +64,37 @@ def populated_db(db_conn: sqlite3.Connection) -> sqlite3.Connection:
     )
     db_conn.commit()
     return db_conn
+
+
+def _make_embedding(keyword: str, dim: int = 384) -> bytes:
+    """Create a deterministic test embedding from a keyword.
+
+    Uses PYTHONHASHSEED-safe approach: fixed positions per character.
+    """
+    vec = [0.0] * dim
+    for i, ch in enumerate(keyword):
+        idx = (ord(ch) * 31 + i * 7) % dim
+        vec[idx] += 1.0 / (1 + i * 0.1)
+    norm = math.sqrt(sum(v * v for v in vec)) or 1.0
+    vec = [v / norm for v in vec]
+    return struct.pack(f"{dim}f", *vec)
+
+
+@pytest.fixture
+def populated_db_with_embeddings(
+    populated_db: sqlite3.Connection,
+) -> sqlite3.Connection:
+    """Database with sample processes AND vector embeddings."""
+    embeddings = [
+        ("1.0", _make_embedding("strategy vision"), "hash1"),
+        ("1.1", _make_embedding("business concept"), "hash2"),
+        ("8.0", _make_embedding("information technology"), "hash3"),
+        ("8.5", _make_embedding("ai operations mlops"), "hash4"),
+    ]
+    populated_db.executemany(
+        "INSERT INTO process_embeddings (process_id, embedding, text_hash) "
+        "VALUES (?, ?, ?)",
+        embeddings,
+    )
+    populated_db.commit()
+    return populated_db

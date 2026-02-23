@@ -45,17 +45,38 @@ def get_subtree(
 
 
 def search_processes(
-    conn: sqlite3.Connection, query: str, lang: str = "zh", limit: int = 10
+    conn: sqlite3.Connection,
+    query: str,
+    lang: str = "zh",
+    limit: int = 10,
+    level: int | None = None,
 ) -> list[dict]:
-    """Full-text search on process names and descriptions."""
+    """Search processes — vector search primary, SQL LIKE fallback.
+
+    Returns list of process dicts. When vector search is used,
+    each dict includes a `score` field (cosine similarity 0.0-1.0).
+    """
+    from oprocess.db.vector_search import has_embeddings, vector_search
+
+    if has_embeddings(conn):
+        return vector_search(
+            conn, query, limit=limit, threshold=0.0, level=level,
+        )
+
+    # Fallback: SQL LIKE (no score available)
     col = f"name_{lang}"
     desc_col = f"description_{lang}"
     pattern = f"%{query}%"
+    conditions = [f"({col} LIKE ? OR {desc_col} LIKE ?)"]
+    params: list = [pattern, pattern]
+    if level is not None:
+        conditions.append("level = ?")
+        params.append(level)
+    params.append(limit)
+    where = " AND ".join(conditions)
     rows = conn.execute(
-        f"""SELECT * FROM processes
-        WHERE {col} LIKE ? OR {desc_col} LIKE ?
-        ORDER BY level, id LIMIT ?""",
-        (pattern, pattern, limit),
+        f"SELECT * FROM processes WHERE {where} ORDER BY level, id LIMIT ?",
+        params,
     ).fetchall()
     return [_row_to_process(r) for r in rows]
 
