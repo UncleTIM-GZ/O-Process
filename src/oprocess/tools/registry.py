@@ -10,8 +10,6 @@ from pathlib import Path
 
 from oprocess.db.connection import get_connection, init_schema
 from oprocess.db.queries import (
-    count_kpis,
-    count_processes,
     get_ancestor_chain,
     get_kpis_for_process,
     get_process,
@@ -287,17 +285,3 @@ def register_tools(mcp) -> None:
         conn.close()
         return _to_json(resp)
 
-    @mcp.resource("oprocess://stats")
-    def get_stats() -> str:
-        """Get O'Process framework statistics."""
-        conn = _get_conn()
-        stats = {
-            "total_processes": count_processes(conn),
-            "total_kpis": count_kpis(conn),
-            "version": "0.1.0",
-            "sources": [
-                "APQC PCF 7.4", "ITIL 4", "SCOR 12.0", "AI-era",
-            ],
-        }
-        conn.close()
-        return json.dumps(stats, ensure_ascii=False, indent=2)

@@ -11,6 +11,7 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from oprocess.tools.registry import register_tools
+from oprocess.tools.resources import register_resources
 
 mcp = FastMCP(
     "O'Process",
@@ -19,6 +20,7 @@ mcp = FastMCP(
 )
 
 register_tools(mcp)
+register_resources(mcp)
 
 if __name__ == "__main__":
     mcp.run()

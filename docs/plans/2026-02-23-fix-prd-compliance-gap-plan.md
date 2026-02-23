@@ -226,34 +226,34 @@ def _hash_input(params: dict) -> str:
 
 ### 4.1 实现 5 个 Resource
 
-- [ ] **`oprocess://process/{id}`** — 单个流程节点完整信息
+- [x] **`oprocess://process/{id}`** — 单个流程节点完整信息
   - 调用 `get_process()` 返回 JSON
 
-- [ ] **`oprocess://category/list`** — 全部顶层分类列表
+- [x] **`oprocess://category/list`** — 全部顶层分类列表
   - 查询 `level=1` 的所有流程，返回 `[{id, name_zh, name_en, domain}]`
 
-- [ ] **`oprocess://role/{role_name}`** — 角色对应流程映射缓存
+- [x] **`oprocess://role/{role_name}`** — 角色对应流程映射缓存
   - 调用 `search_processes(role_name)` 返回映射结果
   - 后续可接入 `role_mappings` 表做缓存
 
-- [ ] **`oprocess://audit/session/{session_id}`** — Session 审计日志摘要
+- [x] **`oprocess://audit/session/{session_id}`** — Session 审计日志摘要
   - 调用 `get_session_log()` 返回该 session 的全部记录
 
-- [ ] **`oprocess://schema/sqlite`** — 当前数据库 Schema 定义
+- [x] **`oprocess://schema/sqlite`** — 当前数据库 Schema 定义
   - 返回 `SCHEMA_SQL` 常量内容
 
 ### 4.2 代码位置
 
-- [ ] **新建 `tools/resources.py`** — 所有 Resource 注册函数
-- [ ] **修改 `tools/registry.py`** — 调用 `register_resources(mcp)` 或在同文件注册
+- [x] **新建 `tools/resources.py`** — 所有 Resource 注册函数
+- [x] **修改 `tools/registry.py`** — stats 迁移至 resources.py，清理 unused imports
 
 ### 4.3 保留 oprocess://stats
 
-- [ ] 当前已有的 `oprocess://stats` 保留（虽不在 PRD 中但有用）
+- [x] 当前已有的 `oprocess://stats` 保留（虽不在 PRD 中但有用）
 
 ### 4.4 role_mappings 表
 
-- [ ] **修改 `db/connection.py`** — 新增 `role_mappings` 表：
+- [x] **修改 `db/connection.py`** — 新增 `role_mappings` 表（含复合主键）：
 
 ```sql
 CREATE TABLE IF NOT EXISTS role_mappings (
@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS role_mappings (
 
 ### 4.5 测试
 
-- [ ] 新增 `tests/test_tools/test_resources.py` — 每个 Resource 的读取测试
+- [x] 新增 `tests/test_tools/test_resources.py` — 每个 Resource 的读取测试（10 个测试）
 
 **影响文件**: 新建 `tools/resources.py`, `db/connection.py`, `tools/registry.py`
 **预计新增/修改**: ~120 行代码，~60 行测试

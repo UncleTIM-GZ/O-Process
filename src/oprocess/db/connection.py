@@ -82,6 +82,17 @@ CREATE TABLE IF NOT EXISTS session_audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_session ON session_audit_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON session_audit_log(timestamp);
 
+CREATE TABLE IF NOT EXISTS role_mappings (
+    role_name TEXT NOT NULL,
+    process_id TEXT NOT NULL,
+    confidence REAL,
+    created_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (role_name, process_id),
+    FOREIGN KEY (process_id) REFERENCES processes(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_mappings_role ON role_mappings(role_name);
+
 CREATE TRIGGER IF NOT EXISTS no_update_audit
 BEFORE UPDATE ON session_audit_log
 BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
