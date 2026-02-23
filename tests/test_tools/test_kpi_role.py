@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from oprocess.db.queries import (
     get_ancestor_chain,
     get_kpis_for_process,
@@ -71,7 +69,7 @@ class TestExportDoc:
 
         def _export():
             p = get_process(populated_db, "1.0")
-            chain = get_ancestor_chain(populated_db, "1.0")
+            get_ancestor_chain(populated_db, "1.0")  # verify no error
             kpis = get_kpis_for_process(populated_db, "1.0")
             return {
                 "markdown": f"# {p['name_zh']}",

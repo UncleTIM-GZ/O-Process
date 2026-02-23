@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-import struct
 import sqlite3
+import struct
 
 
 def _unpack_embedding(blob: bytes) -> list[float]:

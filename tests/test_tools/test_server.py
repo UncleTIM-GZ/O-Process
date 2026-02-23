@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from unittest.mock import patch
-
 from oprocess.gateway import PassthroughGateway, ToolResponse
 
 
