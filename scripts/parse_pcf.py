@@ -19,7 +19,7 @@ from openpyxl import load_workbook
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from shared.io import IdRegistry, compute_level, get_parent_id, write_json
-from shared.text import normalize_text
+from shared.text import normalize_text, truncate_at_sentence
 from shared.types import LocalizedText, ProcessNode
 
 # ── Constants ──────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ def _rows_to_nodes(
             name=LocalizedText(en=name_en, zh=""),
             description=LocalizedText(en=desc_en, zh=""),
             tags=_build_tags(hid),
-            ai_context=desc_en[:200] if desc_en else "",
+            ai_context=truncate_at_sentence(desc_en) if desc_en else "",
         )
         nodes.append(node)
     return nodes
