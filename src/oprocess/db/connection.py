@@ -47,8 +47,29 @@ def _close_shared() -> None:
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
-    """Create all tables if they don't exist."""
+    """Create all tables if they don't exist, then apply migrations."""
     conn.executescript(SCHEMA_SQL)
+    _migrate_audit_request_id(conn)
+
+
+def _migrate_audit_request_id(conn: sqlite3.Connection) -> None:
+    """Add request_id column + unique index if missing (v0.2.0)."""
+    cols = {
+        row[1]
+        for row in conn.execute(
+            "PRAGMA table_info(session_audit_log)",
+        ).fetchall()
+    }
+    if "request_id" not in cols:
+        conn.execute(
+            "ALTER TABLE session_audit_log ADD COLUMN request_id TEXT",
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_request_id "
+        "ON session_audit_log(request_id) "
+        "WHERE request_id IS NOT NULL",
+    )
+    conn.commit()
 
 
 SCHEMA_SQL = """
@@ -104,7 +125,8 @@ CREATE TABLE IF NOT EXISTS session_audit_log (
     lang TEXT,
     response_ms INTEGER,
     timestamp TEXT NOT NULL,
-    governance_ext TEXT DEFAULT '{}'
+    governance_ext TEXT DEFAULT '{}',
+    request_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_session ON session_audit_log(session_id);

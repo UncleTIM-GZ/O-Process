@@ -95,6 +95,52 @@ class TestAuditLog:
         )
 
 
+class TestIdempotency:
+    def test_duplicate_request_id_ignored(self, db_conn):
+        """Same request_id should only write once."""
+        for _ in range(3):
+            log_invocation(
+                db_conn,
+                session_id="s-idem",
+                tool_name="search",
+                input_hash="aabbccdd00112233",
+                request_id="req-001",
+            )
+        logs = get_session_log(db_conn, "s-idem")
+        assert len(logs) == 1
+
+    def test_no_request_id_allows_duplicates(self, db_conn):
+        """Without request_id, multiple writes are allowed."""
+        for _ in range(3):
+            log_invocation(
+                db_conn,
+                session_id="s-norid",
+                tool_name="search",
+                input_hash="aabbccdd00112233",
+            )
+        logs = get_session_log(db_conn, "s-norid")
+        assert len(logs) == 3
+
+    def test_different_request_ids_both_written(self, db_conn):
+        """Different request_ids write separate entries."""
+        log_invocation(
+            db_conn,
+            session_id="s-diff",
+            tool_name="search",
+            input_hash="aabbccdd00112233",
+            request_id="req-A",
+        )
+        log_invocation(
+            db_conn,
+            session_id="s-diff",
+            tool_name="search",
+            input_hash="aabbccdd00112233",
+            request_id="req-B",
+        )
+        logs = get_session_log(db_conn, "s-diff")
+        assert len(logs) == 2
+
+
 class TestAppendOnlyTriggers:
     def test_update_blocked(self, db_conn):
         log_invocation(

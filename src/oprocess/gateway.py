@@ -8,6 +8,7 @@ Every MCP tool invocation passes through the gateway, which:
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import time
 import uuid
@@ -16,6 +17,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from oprocess.governance.audit import hash_input, log_invocation
+
+logger = logging.getLogger("oprocess")
 
 
 @dataclass
@@ -44,6 +47,15 @@ class ToolGatewayInterface:
         start = time.monotonic()
         result = func(**kwargs)
         elapsed_ms = int((time.monotonic() - start) * 1000)
+
+        logger.info(
+            "tool.execute",
+            extra={
+                "tool": tool_name,
+                "session_id": self.session_id,
+                "ms": elapsed_ms,
+            },
+        )
 
         return ToolResponse(
             result=result,
@@ -98,6 +110,16 @@ class PassthroughGateway(ToolGatewayInterface):
                     response_ms=elapsed_ms,
                     governance_ext=gov_ext,
                 )
+
+        logger.info(
+            "tool.execute",
+            extra={
+                "tool": tool_name,
+                "session_id": self.session_id,
+                "ms": elapsed_ms,
+                "error": error_info,
+            },
+        )
 
         return ToolResponse(
             result=result,

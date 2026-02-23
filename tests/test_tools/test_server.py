@@ -109,7 +109,7 @@ class TestMultiTransport:
         mock_run.assert_called_once_with(transport="stdio")
 
     def test_main_sse_transport(self, monkeypatch):
-        """main() with --transport sse → sse with host/port."""
+        """main() with --transport sse → sse with host/port/middleware."""
         from unittest.mock import MagicMock
 
         from oprocess import server
@@ -121,9 +121,44 @@ class TestMultiTransport:
             ["oprocess", "--transport", "sse", "--port", "9000"],
         )
         server.main()
-        mock_run.assert_called_once_with(
-            transport="sse", host="127.0.0.1", port=9000,
-        )
+        mock_run.assert_called_once()
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs["transport"] == "sse"
+        assert call_kwargs["host"] == "127.0.0.1"
+        assert call_kwargs["port"] == 9000
+        assert "middleware" in call_kwargs
+
+
+class TestStructuredLogging:
+    def test_gateway_logs_tool_execute(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="oprocess"):
+            gw = ToolGatewayInterface(session_id="log-test")
+            gw.execute("my_tool", lambda: 42)
+        assert any("tool.execute" in r.message for r in caplog.records)
+        log = next(r for r in caplog.records if "tool.execute" in r.message)
+        assert log.tool == "my_tool"
+        assert log.session_id == "log-test"
+        assert hasattr(log, "ms")
+
+    def test_passthrough_logs_tool_execute(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.INFO, logger="oprocess"):
+            gw = PassthroughGateway(session_id="pt-log")
+            gw.execute("search", lambda: [])
+        assert any("tool.execute" in r.message for r in caplog.records)
+
+    def test_log_level_env(self, monkeypatch):
+        from oprocess.server import _configure_logging
+
+        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        _configure_logging()
+        import logging
+
+        oprocess_logger = logging.getLogger("oprocess")
+        assert oprocess_logger.getEffectiveLevel() <= logging.DEBUG
 
 
 class TestToolResponse:

@@ -66,11 +66,36 @@ Invalid inputs raise `ToolError` with descriptive messages.
 | `oprocess://schema/sqlite` | SQLite schema definition |
 | `oprocess://stats` | Framework statistics |
 
+## Authentication
+
+HTTP transports (SSE, streamable-http) support Bearer token authentication:
+
+```bash
+# Set API key
+export OPROCESS_API_KEY="your-secret-key"
+
+# Client requests must include:
+#   Authorization: Bearer your-secret-key
+```
+
+When `OPROCESS_API_KEY` is not set, authentication is disabled (safe for stdio mode).
+
+## Logging
+
+Structured logging via Python `logging` module:
+
+```bash
+# Set log level (default: WARNING)
+export LOG_LEVEL=INFO   # DEBUG, INFO, WARNING, ERROR
+
+# Logs include: tool name, session ID, response time (ms)
+```
+
 ## Governance-Lite
 
 Transparent governance layer (non-blocking):
 
-- **SessionAuditLog** -- Append-only invocation log per session
+- **SessionAuditLog** -- Append-only invocation log per session (idempotent via `request_id`)
 - **BoundaryResponse** -- Structured fallback when semantic confidence is low (threshold: 0.45)
 - **ProvenanceChain** -- Derivation trail attached to every tool response
 

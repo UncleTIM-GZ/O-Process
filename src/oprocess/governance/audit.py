@@ -29,8 +29,13 @@ def log_invocation(
     lang: str | None = None,
     response_ms: int | None = None,
     governance_ext: dict | None = None,
+    request_id: str | None = None,
 ) -> None:
-    """Append an audit log entry. Never raises."""
+    """Append an audit log entry. Never raises.
+
+    If request_id is provided, duplicate request_ids are silently ignored
+    (idempotent writes via INSERT OR IGNORE + UNIQUE index).
+    """
     try:
         node_ids_json = (
             json.dumps(output_node_ids)
@@ -43,10 +48,10 @@ def log_invocation(
             else "{}"
         )
         conn.execute(
-            """INSERT INTO session_audit_log
+            """INSERT OR IGNORE INTO session_audit_log
             (session_id, tool_name, input_hash, output_node_ids,
-             lang, response_ms, timestamp, governance_ext)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+             lang, response_ms, timestamp, governance_ext, request_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 session_id,
                 tool_name,
@@ -56,6 +61,7 @@ def log_invocation(
                 response_ms,
                 datetime.now(timezone.utc).isoformat(),
                 gov_json,
+                request_id,
             ),
         )
         conn.commit()

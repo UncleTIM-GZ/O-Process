@@ -9,11 +9,32 @@ Run:
 from __future__ import annotations
 
 import argparse
+import logging
+import os
 
 from fastmcp import FastMCP
 
 from oprocess.tools.registry import register_tools
 from oprocess.tools.resources import register_resources
+
+
+def _configure_logging() -> None:
+    """Configure structured logging from LOG_LEVEL env var."""
+    level_name = os.environ.get("LOG_LEVEL", "WARNING").upper()
+    level = getattr(logging, level_name, logging.WARNING)
+    oprocess_logger = logging.getLogger("oprocess")
+    oprocess_logger.setLevel(level)
+    if not oprocess_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(name)s %(levelname)s %(message)s",
+            ),
+        )
+        oprocess_logger.addHandler(handler)
+
+
+_configure_logging()
 
 mcp = FastMCP(
     "O'Process",
@@ -53,6 +74,12 @@ def main() -> None:
     if args.transport != "stdio":
         kwargs["host"] = args.host
         kwargs["port"] = args.port
+
+        from starlette.middleware import Middleware
+
+        from oprocess.auth import BearerAuthMiddleware
+
+        kwargs["middleware"] = [Middleware(BearerAuthMiddleware)]
 
     mcp.run(transport=args.transport, **kwargs)
 

@@ -468,9 +468,9 @@ logger.info(
 ```
 
 **验收标准**:
-- [ ] `logging.getLogger("oprocess")` 输出 JSON 格式日志
-- [ ] 每次 Tool 调用记录 tool_name、session_id、response_ms
-- [ ] 日志级别可通过环境变量 `LOG_LEVEL` 控制
+- [x] `logging.getLogger("oprocess")` 输出 JSON 格式日志
+- [x] 每次 Tool 调用记录 tool_name、session_id、response_ms
+- [x] 日志级别可通过环境变量 `LOG_LEVEL` 控制
 
 ---
 
@@ -488,8 +488,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_request ON session_audit_log(request
 `log_invocation()` 新增 `request_id` 参数，使用 `INSERT OR IGNORE`。
 
 **验收标准**:
-- [ ] 相同 `request_id` 只写入一次
-- [ ] 无 `request_id` 时行为不变（向后兼容）
+- [x] 相同 `request_id` 只写入一次
+- [x] 无 `request_id` 时行为不变（向后兼容）
 
 ---
 
@@ -513,9 +513,9 @@ def verify_token(token: str) -> bool:
 在 SSE 传输时注入认证检查。stdio 模式不受影响。
 
 **验收标准**:
-- [ ] `OPROCESS_API_KEY` 设置时，无 token 请求返回 401
-- [ ] stdio 模式不受影响
-- [ ] README 文档化认证配置
+- [x] `OPROCESS_API_KEY` 设置时，无 token 请求返回 401
+- [x] stdio 模式不受影响
+- [x] README 文档化认证配置
 
 ---
 
@@ -586,7 +586,7 @@ P2.1 (日志) → P2.2 (幂等性) → P2.3 (OAuth) → P2.4 (sqlite-vec)
 
 - [ ] **P0 完成**: Pydantic schema + ToolError + lang 白名单 + README
 - [ ] **P1 完成**: 多传输 + 向量搜索修复 + 连接池 + ping
-- [ ] **P2 完成**: 日志 + 幂等性 + OAuth + sqlite-vec
+- [x] **P2 完成**: 日志 + 幂等性 + OAuth（sqlite-vec 延后至有原生扩展时）
 - [ ] 全流程: `ruff check . && pytest && pytest --benchmark-only` 全通过
 - [ ] 认证自查: 7+1 Tool 全部有完整 inputSchema，无 error dict
 - [ ] 文档自查: README 包含 Quick Start + Tool 表 + Resource 表 + Claude Desktop 配置
