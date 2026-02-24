@@ -13,12 +13,12 @@ P6 — MCP Spec 2025-11-25 全面合规审查修复（待开始）。
 | P6-2 | Gateway 单例统一 (消除双 session_id) | P0 | Done |
 | P6-3 | health_check 走 Gateway | P0 | Done |
 | P6-4 | README 同步更新 | P0 | Done |
-| P6-5 | destructiveHint=False 显式声明 | P1 | Pending |
-| P6-6 | resources.py 测试覆盖率 → 80%+ | P1 | Pending |
-| P6-7 | auth.py 测试覆盖率 → 80%+ | P1 | Pending |
+| P6-5 | destructiveHint=False 显式声明 | P1 | Done |
+| P6-6 | resources.py 测试覆盖率 → 80%+ | P1 | Done |
+| P6-7 | auth.py 测试覆盖率 → 80%+ | P1 | Done |
 | P6-8 | MCP Prompts (3 个引导模板) | P2 | Pending |
 | P6-9 | MCP logging capability | P2 | Pending |
-| P6-10 | atexit 线程安全修复 | P2 | Pending |
+| P6-10 | atexit 线程安全修复 | P2 | Done |
 
 ## 审查基线
 

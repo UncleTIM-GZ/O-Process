@@ -22,6 +22,7 @@ from oprocess.tools.serialization import response_to_json
 # -- Tool annotations --
 _READ_ONLY_OPEN = ToolAnnotations(
     readOnlyHint=True, idempotentHint=True, openWorldHint=True,
+    destructiveHint=False,
 )
 
 # -- Reusable Annotated type aliases --

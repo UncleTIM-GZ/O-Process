@@ -38,6 +38,7 @@ from oprocess.tools.serialization import response_to_json
 # -- Tool annotations --
 _READ_ONLY = ToolAnnotations(
     readOnlyHint=True, idempotentHint=True, openWorldHint=False,
+    destructiveHint=False,
 )
 
 # -- Reusable Annotated type aliases for tool parameters --

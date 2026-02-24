@@ -157,11 +157,11 @@ tests/test_tools/test_prompts.py    — Prompt 测试
 - [x] pytest 全部通过
 
 ### P1 (Commit 2)
-- [ ] 所有 ToolAnnotations 含 `destructiveHint=False`
-- [ ] `resources.py` 覆盖率 ≥ 80%
-- [ ] `auth.py` 覆盖率 ≥ 80%
-- [ ] atexit 无 ProgrammingError 输出
-- [ ] 总覆盖率 ≥ 85%
+- [x] 所有 ToolAnnotations 含 `destructiveHint=False`
+- [x] `resources.py` 覆盖率 ≥ 80%
+- [x] `auth.py` 覆盖率 ≥ 80%
+- [x] atexit 无 ProgrammingError 输出
+- [x] 总覆盖率 ≥ 85%
 
 ### P2 (Commit 3)
 - [ ] 3 个 MCP Prompts 可被客户端发现

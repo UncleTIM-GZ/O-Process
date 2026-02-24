@@ -62,7 +62,10 @@ def _close_shared() -> None:
     """Close shared connection on process exit."""
     global _shared_conn
     if _shared_conn is not None:
-        _shared_conn.close()
+        try:
+            _shared_conn.close()
+        except sqlite3.ProgrammingError:
+            pass  # Thread-safety error during shutdown — harmless
         _shared_conn = None
 
 
