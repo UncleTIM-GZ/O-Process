@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import sqlite3
 
+from fastmcp.exceptions import ToolError
+
 from oprocess.db.embedder import EmbedProvider, get_embedder
 from oprocess.db.row_utils import row_to_process
 from oprocess.db.vector_search import has_vec_table, vector_search
@@ -22,7 +24,7 @@ def validate_lang(lang: str) -> None:
     """Validate language parameter (defense-in-depth for dynamic SQL)."""
     if lang not in _VALID_LANGS:
         msg = f"Invalid language '{lang}'. Must be one of: {sorted(_VALID_LANGS)}"
-        raise ValueError(msg)
+        raise ToolError(msg)
 
 
 def get_process(conn: sqlite3.Connection, process_id: str) -> dict | None:

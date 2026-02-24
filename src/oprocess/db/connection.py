@@ -35,8 +35,10 @@ def _load_sqlite_vec(conn: sqlite3.Connection) -> None:
         conn.enable_load_extension(True)
         sqlite_vec.load(conn)
         conn.enable_load_extension(False)
-    except (ImportError, Exception):
-        pass  # sqlite-vec not installed — skip silently
+    except ImportError:
+        pass  # sqlite-vec not installed
+    except Exception as exc:
+        logger.debug("Failed to load sqlite-vec: %s", type(exc).__name__)
 
 
 def get_shared_connection(
@@ -79,8 +81,8 @@ def _create_vec_table(conn: sqlite3.Connection) -> None:
             f"USING vec0(process_id TEXT PRIMARY KEY, embedding float[{GEMINI_DIM}])",
         )
         conn.commit()
-    except Exception:
-        logger.debug("sqlite-vec not available, skipping vec table")
+    except Exception as exc:
+        logger.debug("sqlite-vec unavailable: %s", type(exc).__name__)
 
 
 def _migrate_audit_request_id(conn: sqlite3.Connection) -> None:

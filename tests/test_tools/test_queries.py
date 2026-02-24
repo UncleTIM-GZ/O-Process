@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from fastmcp.exceptions import ToolError
 
 from oprocess.db.queries import (
     _escape_like,
@@ -156,11 +157,11 @@ class TestValidateLang:
         validate_lang("en")  # should not raise
 
     def test_invalid_lang_search(self, populated_db):
-        with pytest.raises(ValueError, match="Invalid language"):
+        with pytest.raises(ToolError, match="Invalid language"):
             search_processes(populated_db, "test", lang="fr")
 
     def test_invalid_lang_direct(self):
-        with pytest.raises(ValueError, match="Invalid language"):
+        with pytest.raises(ToolError, match="Invalid language"):
             validate_lang("french")
 
 

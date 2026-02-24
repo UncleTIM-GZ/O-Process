@@ -108,7 +108,7 @@ def compare_process_nodes(
     conn: sqlite3.Connection, process_ids: str,
 ) -> dict:
     """Compare multiple process nodes by their IDs (comma-separated)."""
-    ids = [pid.strip() for pid in process_ids.split(",")]
+    ids = [pid.strip() for pid in process_ids.split(",") if pid.strip()]
     processes = {}
     for pid in ids:
         p = get_process(conn, pid)

@@ -86,6 +86,9 @@ def register_resources(mcp) -> None:
 
         Uses real-time search; role_mappings table reserved for caching.
         """
+        if not role_name.strip():
+            msg = "role_name cannot be empty"
+            raise ResourceError(msg)
         conn = get_shared_connection()
         results = search_processes(
             conn, role_name, lang="zh", limit=10,

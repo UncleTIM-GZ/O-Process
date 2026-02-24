@@ -117,6 +117,13 @@ class TestCompareProcesses:
         assert "path" in result["processes"]["1.1"]
         assert result["processes"]["1.1"]["path"] == ["1.0", "1.1"]
 
+    def test_empty_ids_filtered(self, populated_db):
+        """P5-3: Empty IDs in comma-separated list are filtered out."""
+        result = compare_process_nodes(populated_db, "1.0,,8.0")
+        assert "1.0" in result["processes"]
+        assert "8.0" in result["processes"]
+        assert len(result["comparisons"]) == 1
+
 
 class TestResponsibilitiesMarkdown:
     def test_format_markdown(self, populated_db):
