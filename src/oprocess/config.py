@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 try:
     import tomllib
@@ -43,5 +46,5 @@ def get_config() -> dict:
             overrides = data.get("tool", {}).get("oprocess", {})
             _config.update(overrides)
         except Exception:
-            pass  # Fall back to defaults
+            logger.warning("Failed to parse pyproject.toml", exc_info=True)
     return _config

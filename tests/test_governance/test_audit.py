@@ -7,11 +7,11 @@ import sqlite3
 import pytest
 
 from oprocess.governance.audit import (
-    _validate_session_id,
     get_session_log,
     hash_input,
     log_invocation,
 )
+from oprocess.validators import validate_session_id as _validate_session_id
 
 # Valid UUID4 session IDs for testing
 _SID1 = "11111111-1111-4111-8111-111111111111"

@@ -22,9 +22,9 @@ from oprocess.db.queries import (
     get_kpis_for_process,
     get_process,
     get_subtree,
-    validate_lang,
 )
 from oprocess.gateway import get_shared_gateway
+from oprocess.tools._types import Lang, ProcessId, ProcessIdList, ProcessIdListOpt
 from oprocess.tools.export import build_responsibility_doc
 from oprocess.tools.helpers import (
     build_hierarchy_provenance,
@@ -34,34 +34,13 @@ from oprocess.tools.helpers import (
 )
 from oprocess.tools.search import register_search_tools
 from oprocess.tools.serialization import response_to_json
+from oprocess.validators import validate_lang
 
 # -- Tool annotations --
 _READ_ONLY = ToolAnnotations(
     readOnlyHint=True, idempotentHint=True, openWorldHint=False,
     destructiveHint=False,
 )
-
-# -- Reusable Annotated type aliases for tool parameters --
-Lang = Annotated[
-    Literal["zh", "en"], Field(description="Language"),
-]
-ProcessId = Annotated[
-    str, Field(pattern=r"^\d+(\.\d+)*$", description="Process ID"),
-]
-ProcessIdList = Annotated[
-    str,
-    Field(
-        pattern=r"^\d+(\.\d+)*(,\s*\d+(\.\d+)*)+$",
-        description="Comma-separated process IDs (2+)",
-    ),
-]
-ProcessIdListOpt = Annotated[
-    str,
-    Field(
-        pattern=r"^\d+(\.\d+)*(,\s*\d+(\.\d+)*)*$",
-        description="Comma-separated process IDs (1+)",
-    ),
-]
 
 
 def register_tools(mcp) -> None:
@@ -124,10 +103,9 @@ def register_tools(mcp) -> None:
             }
 
         resp = get_shared_gateway().execute("get_kpi_suggestions", _get_kpis)
-        process = get_process(conn, process_id)
-        if process:
+        if resp.result and "process" in resp.result:
             resp.provenance_chain = build_lookup_provenance(
-                conn, process_id, process["name_zh"],
+                conn, process_id, resp.result["process"]["name_zh"],
             )
 
         return response_to_json(resp)

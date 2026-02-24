@@ -15,10 +15,9 @@ The `role_mappings` table is reserved for future caching layer.
 
 from __future__ import annotations
 
-import re
-
 from fastmcp.exceptions import ResourceError
 
+import oprocess
 from oprocess.db.connection import SCHEMA_SQL, get_shared_connection
 from oprocess.db.queries import (
     count_kpis,
@@ -29,26 +28,7 @@ from oprocess.db.queries import (
 )
 from oprocess.governance.audit import get_session_log
 from oprocess.tools.serialization import to_json
-
-_PROCESS_ID_RE = re.compile(r"^\d+(\.\d+)*$")
-_SESSION_ID_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-    re.IGNORECASE,
-)
-
-
-def _validate_process_id(process_id: str) -> None:
-    """Validate process_id URI parameter format."""
-    if not _PROCESS_ID_RE.match(process_id):
-        msg = f"Invalid process ID format: {process_id}"
-        raise ResourceError(msg)
-
-
-def _validate_session_id(session_id: str) -> None:
-    """Validate session_id URI parameter format (UUID4)."""
-    if not _SESSION_ID_RE.match(session_id):
-        msg = f"Invalid session ID format: {session_id}"
-        raise ResourceError(msg)
+from oprocess.validators import validate_process_id, validate_session_id
 
 
 def register_resources(mcp) -> None:
@@ -59,7 +39,7 @@ def register_resources(mcp) -> None:
         """Get complete information for a single process node.
 
         Returns JSON with id, name, description, domain, level, and tags."""
-        _validate_process_id(process_id)
+        validate_process_id(process_id, resource=True)
         conn = get_shared_connection()
         process = get_process(conn, process_id)
         if not process:
@@ -112,7 +92,7 @@ def register_resources(mcp) -> None:
         """Get audit log entries for a specific session.
 
         Returns JSON array of tool call records with timestamps."""
-        _validate_session_id(session_id)
+        validate_session_id(session_id, resource=True)
         conn = get_shared_connection()
         return to_json(get_session_log(conn, session_id))
 
@@ -132,7 +112,7 @@ def register_resources(mcp) -> None:
         return to_json({
             "total_processes": count_processes(conn),
             "total_kpis": count_kpis(conn),
-            "version": "0.3.0",
+            "version": oprocess.__version__,
             "sources": [
                 "APQC PCF 7.4", "ITIL 4", "SCOR 12.0", "AI-era",
             ],

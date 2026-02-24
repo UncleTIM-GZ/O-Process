@@ -13,12 +13,9 @@ from fastmcp.exceptions import ResourceError
 from oprocess.db.connection import SCHEMA_SQL
 from oprocess.db.queries import get_processes_by_level, search_processes
 from oprocess.governance.audit import get_session_log, hash_input, log_invocation
-from oprocess.tools.resources import (
-    _validate_process_id,
-    _validate_session_id,
-    register_resources,
-)
+from oprocess.tools.resources import register_resources
 from oprocess.tools.serialization import to_json
+from oprocess.validators import validate_process_id, validate_session_id
 
 
 class TestProcessResource:
@@ -43,25 +40,25 @@ class TestResourceValidation:
     """P2-4: URI parameter validation."""
 
     def test_valid_process_id(self):
-        _validate_process_id("1.0")
-        _validate_process_id("1.1.2.3")
+        validate_process_id("1.0", resource=True)
+        validate_process_id("1.1.2.3", resource=True)
 
     def test_invalid_process_id(self):
         with pytest.raises(ResourceError):
-            _validate_process_id("abc")
+            validate_process_id("abc", resource=True)
         with pytest.raises(ResourceError):
-            _validate_process_id("")
+            validate_process_id("", resource=True)
         with pytest.raises(ResourceError):
-            _validate_process_id("1..0")
+            validate_process_id("1..0", resource=True)
 
     def test_valid_session_id(self):
-        _validate_session_id("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
+        validate_session_id("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", resource=True)
 
     def test_invalid_session_id(self):
         with pytest.raises(ResourceError):
-            _validate_session_id("not-a-uuid")
+            validate_session_id("not-a-uuid", resource=True)
         with pytest.raises(ResourceError):
-            _validate_session_id("12345678")
+            validate_session_id("12345678", resource=True)
 
 
 class TestCategoryList:

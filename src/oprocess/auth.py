@@ -14,6 +14,8 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger("oprocess")
 
@@ -68,10 +70,15 @@ class BearerAuthMiddleware:
     Validates Origin header when OPROCESS_ALLOWED_ORIGINS is set.
     """
 
-    def __init__(self, app):
+    def __init__(self, app: Any) -> None:
         self.app = app
 
-    async def __call__(self, scope, receive, send):
+    async def __call__(
+        self,
+        scope: dict[str, Any],
+        receive: Callable,
+        send: Callable,
+    ) -> None:
         if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
@@ -104,7 +111,7 @@ class BearerAuthMiddleware:
         logger.warning("auth.rejected", extra={"path": scope.get("path")})
         await self._send_401(send)
 
-    async def _send_401(self, send):
+    async def _send_401(self, send: Callable) -> None:
         await send({
             "type": "http.response.start",
             "status": 401,
@@ -118,7 +125,7 @@ class BearerAuthMiddleware:
             "body": b'{"error":"unauthorized","message":"Bearer token required"}',
         })
 
-    async def _send_403(self, send):
+    async def _send_403(self, send: Callable) -> None:
         await send({
             "type": "http.response.start",
             "status": 403,

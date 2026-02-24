@@ -15,6 +15,7 @@ import os
 from fastmcp import FastMCP
 from mcp.types import Icon
 
+import oprocess
 from oprocess.config import get_config
 from oprocess.prompts import register_prompts
 from oprocess.tools.rate_limit import RateLimitMiddleware
@@ -72,7 +73,7 @@ _ICON_DATA_URI = (
 
 mcp = FastMCP(
     "O'Process",
-    version="0.3.0",
+    version=oprocess.__version__,
     instructions="AI-native process classification framework (OPF). "
     "Query 2325 processes + 3910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0.",
     icons=[Icon(src=_ICON_DATA_URI, mimeType="image/svg+xml")],

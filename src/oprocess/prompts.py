@@ -8,46 +8,12 @@ Three guided prompts that help clients discover and use core tools:
 
 from __future__ import annotations
 
-import re
-
-_PROCESS_ID_RE = re.compile(r"^\d+(\.\d+)*$")
-_PROCESS_IDS_RE = re.compile(r"^\d+(\.\d+)*(,\s*\d+(\.\d+)*)*$")
-_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
-
-
-def _validate_process_id(pid: str) -> None:
-    if not _PROCESS_ID_RE.match(pid):
-        msg = f"Invalid process_id format: {pid!r}"
-        raise ValueError(msg)
-
-
-def _validate_process_ids(pids: str) -> None:
-    if not _PROCESS_IDS_RE.match(pids):
-        msg = f"Invalid process_ids format: {pids!r}"
-        raise ValueError(msg)
-
-
-def _validate_lang(lang: str) -> None:
-    if lang not in ("zh", "en"):
-        msg = f"lang must be 'zh' or 'en', got {lang!r}"
-        raise ValueError(msg)
-
-
-def _sanitize_role_name(name: str) -> str:
-    """Validate and sanitize role_name to prevent prompt injection.
-
-    Strips control chars, collapses whitespace, enforces length limit.
-    Returns the sanitized string.
-    """
-    cleaned = _CONTROL_CHAR_RE.sub("", name)
-    cleaned = " ".join(cleaned.split())  # collapse \n \r \t and multi-spaces
-    if not cleaned:
-        msg = "role_name cannot be empty"
-        raise ValueError(msg)
-    if len(cleaned) > 100:
-        msg = f"role_name exceeds 100 chars ({len(cleaned)})"
-        raise ValueError(msg)
-    return cleaned
+from oprocess.validators import (
+    sanitize_role_name,
+    validate_lang,
+    validate_process_id,
+    validate_process_ids,
+)
 
 
 def register_prompts(mcp) -> None:
@@ -56,8 +22,8 @@ def register_prompts(mcp) -> None:
     @mcp.prompt(title="Process Analysis Workflow")
     def analyze_process(process_id: str, lang: str = "zh") -> str:
         """Guided workflow for analyzing a process node."""
-        _validate_process_id(process_id)
-        _validate_lang(lang)
+        validate_process_id(process_id)
+        validate_lang(lang, tool=False)
         if lang == "zh":
             return (
                 f"## 流程分析工作流\n\n"
@@ -85,9 +51,9 @@ def register_prompts(mcp) -> None:
         process_ids: str, role_name: str, lang: str = "zh",
     ) -> str:
         """Guided workflow for generating a role responsibility document."""
-        _validate_process_ids(process_ids)
-        safe_name = _sanitize_role_name(role_name)
-        _validate_lang(lang)
+        validate_process_ids(process_ids)
+        safe_name = sanitize_role_name(role_name)
+        validate_lang(lang, tool=False)
         if lang == "zh":
             return (
                 f"## 岗位说明书生成工作流\n\n"
@@ -113,8 +79,8 @@ def register_prompts(mcp) -> None:
     @mcp.prompt(title="KPI Review Workflow")
     def kpi_review(process_id: str, lang: str = "zh") -> str:
         """Guided workflow for reviewing KPIs of a process."""
-        _validate_process_id(process_id)
-        _validate_lang(lang)
+        validate_process_id(process_id)
+        validate_lang(lang, tool=False)
         if lang == "zh":
             return (
                 f"## KPI 审查工作流\n\n"

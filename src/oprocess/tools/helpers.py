@@ -11,11 +11,11 @@ from oprocess.db.queries import (
     build_path_strings_batch,
     get_ancestor_chain,
     get_process,
-    validate_lang,
 )
 from oprocess.gateway import ToolResponse
 from oprocess.governance.boundary import check_boundary
 from oprocess.governance.provenance import ProvenanceChain
+from oprocess.validators import validate_lang
 
 
 def apply_boundary(
@@ -128,11 +128,14 @@ def compare_process_nodes(
                 "same_level": a.get("level") == b.get("level"),
             })
 
+    # Batch-build ancestor paths to avoid N+1 queries
+    path_map = build_path_strings_batch(conn, ids)
+
     return {
         "processes": {
             pid: {
                 **p,
-                "path": [n["id"] for n in get_ancestor_chain(conn, pid)],
+                "path": path_map.get(pid, pid).split(" > "),
             }
             for pid, p in processes.items()
         },

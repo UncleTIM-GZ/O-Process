@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from oprocess.db.queries import (
-    build_path_string,
+    build_path_strings_batch,
     get_ancestor_chain,
     get_kpis_for_process,
     get_process,
     get_subtree,
-    validate_lang,
 )
+from oprocess.validators import validate_lang
 
 
 def render_children(
@@ -71,7 +71,9 @@ def _build_single_doc(
                 f"- **{kpi[name_key]}** ({kpi.get('unit', '')})",
             )
 
-    # Provenance appendix
+    # Provenance appendix (batch path queries to avoid N+1)
+    chain_ids = [node["id"] for node in chain]
+    path_map = build_path_strings_batch(conn, chain_ids)
     lines.extend([
         "",
         "## 溯源附录" if lang == "zh" else "## Provenance Appendix",
@@ -83,7 +85,7 @@ def _build_single_doc(
         lines.append("| Node ID | Name | Confidence | Path | Rule |")
     lines.append("|---------|------|--------|------|---------|")
     for node in chain:
-        path = build_path_string(conn, node["id"])
+        path = path_map.get(node["id"], node["id"])
         confidence = 1.0 if node["id"] == process_id else 0.5
         lines.append(
             f"| {node['id']} | {node[name_key]} "

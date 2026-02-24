@@ -5,7 +5,7 @@ Split from registry.py to keep files under 300 lines.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from mcp.types import ToolAnnotations
 from pydantic import Field
@@ -13,6 +13,7 @@ from pydantic import Field
 from oprocess.db.connection import get_shared_connection
 from oprocess.db.queries import search_processes
 from oprocess.gateway import get_shared_gateway
+from oprocess.tools._types import Lang
 from oprocess.tools.helpers import (
     apply_boundary,
     build_search_provenance,
@@ -24,11 +25,6 @@ _READ_ONLY_OPEN = ToolAnnotations(
     readOnlyHint=True, idempotentHint=True, openWorldHint=True,
     destructiveHint=False,
 )
-
-# -- Reusable Annotated type aliases --
-Lang = Annotated[
-    Literal["zh", "en"], Field(description="Language"),
-]
 
 def register_search_tools(mcp) -> None:
     """Register search-related tool functions on the FastMCP instance."""
