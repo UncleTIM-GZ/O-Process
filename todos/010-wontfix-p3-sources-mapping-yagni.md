@@ -1,5 +1,5 @@
 ---
-status: pending
+status: wont_fix
 priority: p3
 issue_id: "010"
 tags: [code-review, yagni]
@@ -37,3 +37,4 @@ dependencies: []
 
 | Date | Action | Learnings |
 |------|--------|-----------|
+| 2026-02-24 | wont_fix: identity mapping is intentional (Phase 1) | parse_pcf.py:139 documents this as `# (identity for Phase 1)` |

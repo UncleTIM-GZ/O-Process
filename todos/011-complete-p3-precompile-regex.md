@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 priority: p3
 issue_id: "011"
 tags: [code-review, performance]
@@ -34,3 +34,4 @@ dependencies: []
 
 | Date | Action | Learnings |
 |------|--------|-----------|
+| 2026-02-24 | complete: already implemented at translate.py:84-93 | _NOUN_PATTERNS and _VERB_PATTERNS pre-compiled at module level |
