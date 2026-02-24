@@ -173,6 +173,26 @@ def build_path_string(conn: sqlite3.Connection, process_id: str) -> str:
     return " > ".join(n["id"] for n in chain)
 
 
+def build_path_strings_batch(
+    conn: sqlite3.Connection, process_ids: list[str],
+) -> dict[str, str]:
+    """Build ancestor path strings for multiple IDs in batch.
+
+    Caches intermediate results to reduce repeated lookups.
+    """
+    cache: dict[str, str] = {}
+    for pid in process_ids:
+        if pid not in cache:
+            chain = get_ancestor_chain(conn, pid)
+            # Cache all ancestors encountered along the way
+            for i, node in enumerate(chain):
+                if node["id"] not in cache:
+                    cache[node["id"]] = " > ".join(
+                        n["id"] for n in chain[:i + 1]
+                    )
+    return {pid: cache.get(pid, pid) for pid in process_ids}
+
+
 def count_processes(conn: sqlite3.Connection) -> int:
     """Count total processes."""
     row = conn.execute("SELECT COUNT(*) FROM processes").fetchone()

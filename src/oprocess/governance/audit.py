@@ -8,10 +8,21 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def _validate_session_id(session_id: str) -> bool:
+    """Validate session_id is a valid UUID4 format."""
+    return bool(_UUID_RE.match(session_id))
 
 
 def hash_input(params: dict) -> str:
@@ -37,6 +48,13 @@ def log_invocation(
     (idempotent writes via INSERT OR IGNORE + UNIQUE index).
     """
     try:
+        if not _validate_session_id(session_id):
+            logger.warning(
+                "Audit log skipped: invalid session_id format: %s",
+                session_id,
+            )
+            return
+
         node_ids_json = (
             json.dumps(output_node_ids)
             if output_node_ids is not None

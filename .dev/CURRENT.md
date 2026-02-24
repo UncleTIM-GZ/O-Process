@@ -2,23 +2,37 @@
 
 ## 状态
 
-全部 7 个 Spec 已完成。项目处于可发布状态。
+P4 MCP 规范合规修复已完成，待提交。
 
-## 完成摘要
+## P4 完成摘要
 
-| Spec | 内容 | Commit |
-|------|------|--------|
-| 01 | Gemini 2.5 Pro 翻译 8560 项 | b4ee7d5 |
-| 02 | SQLite 入库 + TF-IDF 嵌入 | 519a8fe |
-| 03 | FastMCP 3.0 Server + 7 Tools | 253f60e |
-| 04 | 核心查询 + 向量搜索 + 20 tests | c14e4f6 |
-| 05 | KPI/角色工具 + 9 tests | c9ef9b5 |
-| 06 | Governance-Lite + 12 tests | e4e5791 |
-| 07 | 集成测试 + lint + 打包 | (pending) |
+### P0 — MUST 级别
+| ID | 修复内容 | 状态 |
+|------|----------|------|
+| P0-1 | get_process_tree 返回 None 时抛 ToolError | Done |
+| P0-3 | FastMCP 声明 version="0.3.0" | Done |
 
-## 下次继续时
+### P1 — SHOULD 级别
+| ID | 修复内容 | 状态 |
+|------|----------|------|
+| P1-1 | Resource not found 改用 ResourceError | Done |
+| P1-3 | ping 重命名为 health_check | Done |
+| P1-4 | registry.py 拆分为 registry.py + search.py（265+128 行） | Done |
+| P1-5 | HTTP Origin 验证 (OPROCESS_ALLOWED_ORIGINS) | Done |
 
-项目已完成。可以：
-1. 设置 OPENAI_API_KEY 运行生产质量向量嵌入
-2. 配置 MCP 客户端连接 server
-3. 发布到 PyPI
+### P2 — 改进
+| ID | 修复内容 | 状态 |
+|------|----------|------|
+| P2-1 | vector search N+1 → JOIN 批量查询 | Done |
+| P2-2 | get_responsibilities 全层拉取 → get_children | Done |
+| P2-3 | build_path_string → 批量缓存优化 | Done |
+| P2-4 | Resource URI 参数正则校验 | Done |
+| P2-5 | _to_json() 统一到 serialization.py | Done |
+| P2-6 | session_id 完整 UUID4 | Done |
+| P2-7 | audit session_id 格式校验 | Done |
+
+## 验证结果
+- ruff check: 零 error
+- pytest: 201 passed
+- 覆盖率: 90.55% (≥ 80%)
+- 无文件超 300 行

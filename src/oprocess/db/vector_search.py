@@ -40,6 +40,8 @@ def vector_search(
 
     Returns list of process dicts with `score` field (1.0 - distance),
     sorted by score descending.
+
+    Uses JOIN to eliminate N+1 query pattern.
     """
     # Fetch more than needed when filtering by level (post-filter)
     fetch_limit = limit * 5 if level is not None else limit
@@ -50,16 +52,26 @@ def vector_search(
         (serialize_float32(query_embedding), fetch_limit),
     ).fetchall()
 
+    if not vec_rows:
+        return []
+
+    # Batch-fetch all process rows in one query (eliminates N+1)
+    pids = [vr[0] for vr in vec_rows]
+    placeholders = ",".join("?" * len(pids))
+    proc_rows = conn.execute(
+        f"SELECT * FROM processes WHERE id IN ({placeholders})",
+        pids,
+    ).fetchall()
+
+    proc_map = {row_to_process(r)["id"]: row_to_process(r) for r in proc_rows}
+
     results = []
     for vr in vec_rows:
         pid = vr[0]
         distance = vr[1]
-        proc_row = conn.execute(
-            "SELECT * FROM processes WHERE id = ?", (pid,),
-        ).fetchone()
-        if not proc_row:
+        proc = proc_map.get(pid)
+        if not proc:
             continue
-        proc = row_to_process(proc_row)
         if level is not None and proc["level"] != level:
             continue
         proc["score"] = round(1.0 - distance, 4)

@@ -35,7 +35,7 @@ class ToolGatewayInterface:
     """Base gateway interface for tool execution."""
 
     def __init__(self, session_id: str | None = None) -> None:
-        self.session_id = session_id or str(uuid.uuid4())[:8]
+        self.session_id = session_id or str(uuid.uuid4())
 
     def execute(
         self,

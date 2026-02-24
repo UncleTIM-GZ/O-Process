@@ -8,6 +8,7 @@ from fastmcp.exceptions import ToolError
 
 from oprocess.db.queries import (
     build_path_string,
+    build_path_strings_batch,
     get_ancestor_chain,
     get_process,
     validate_lang,
@@ -54,16 +55,24 @@ def build_search_provenance(
     lang: str,
     derivation_rule: str = "semantic_match",
 ) -> list[dict]:
-    """Build provenance chain from search results."""
+    """Build provenance chain from search results (batch-optimized)."""
     validate_lang(lang)
+    if not results:
+        return []
+
     chain = ProvenanceChain()
     name_key = f"name_{lang}"
+
+    # Batch-build paths to reduce N+1 queries
+    ids = [r["id"] for r in results]
+    path_map = build_path_strings_batch(conn, ids)
+
     for r in results:
         chain.add(
             node_id=r["id"],
             name=r.get(name_key, r.get("name_zh", "")),
             confidence=r.get("score", 1.0),
-            path=build_path_string(conn, r["id"]),
+            path=path_map.get(r["id"], r["id"]),
             derivation_rule=derivation_rule,
         )
     return chain.to_list()
@@ -78,13 +87,18 @@ def build_hierarchy_provenance(
     validate_lang(lang)
     chain = ProvenanceChain()
     ancestors = get_ancestor_chain(conn, process_id)
+
+    # Batch-build paths for all ancestors
+    ids = [node["id"] for node in ancestors]
+    path_map = build_path_strings_batch(conn, ids)
+
     for node in ancestors:
         weight = 1.0 if node["id"] == process_id else 0.5
         chain.add(
             node_id=node["id"],
             name=node[f"name_{lang}"],
             confidence=weight,
-            path=build_path_string(conn, node["id"]),
+            path=path_map.get(node["id"], node["id"]),
             derivation_rule="rule_based",
         )
     return chain.to_list()

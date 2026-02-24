@@ -74,7 +74,7 @@ class TestMapRole:
 
 class TestExportDoc:
     def test_gateway_wraps(self, populated_db):
-        gw = PassthroughGateway(session_id="test")
+        gw = PassthroughGateway(session_id="abababab-abab-4aba-8aba-abababababab")
 
         def _export():
             p = get_process(populated_db, "1.0")
@@ -90,7 +90,7 @@ class TestExportDoc:
         assert resp.result["process_id"] == "1.0"
         assert resp.result["kpi_count"] == 1
         assert "制定愿景与战略" in resp.result["markdown"]
-        assert resp.session_id == "test"
+        assert resp.session_id == "abababab-abab-4aba-8aba-abababababab"
 
 
 class TestCompareProcesses:

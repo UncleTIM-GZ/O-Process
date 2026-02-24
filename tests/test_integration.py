@@ -82,7 +82,7 @@ class TestFullToolChain:
     """Test the complete tool chain: gateway → query → governance."""
 
     def test_search_with_governance(self, real_conn):
-        gw = PassthroughGateway(session_id="int-test-1")
+        gw = PassthroughGateway(session_id="11111111-aaaa-4bbb-8ccc-111111111111")
         provenance = ProvenanceChain()
 
         # Execute search
@@ -116,18 +116,18 @@ class TestFullToolChain:
         # Audit log
         log_invocation(
             real_conn,
-            session_id="int-test-1",
+            session_id="11111111-aaaa-4bbb-8ccc-111111111111",
             tool_name="search_process",
             input_hash=hash_input({"query": "人力资本"}),
             lang="zh",
             response_ms=resp.response_ms,
         )
-        logs = get_session_log(real_conn, "int-test-1")
+        logs = get_session_log(real_conn, "11111111-aaaa-4bbb-8ccc-111111111111")
         assert len(logs) >= 1
 
     def test_export_chain(self, real_conn):
         """Test the full export flow: process → subtree → KPIs → doc."""
-        gw = PassthroughGateway(session_id="int-test-2")
+        gw = PassthroughGateway(session_id="22222222-aaaa-4bbb-8ccc-222222222222")
 
         # Get process
         resp = gw.execute(
@@ -149,7 +149,7 @@ class TestFullToolChain:
         # Log everything
         log_invocation(
             real_conn,
-            session_id="int-test-2",
+            session_id="22222222-aaaa-4bbb-8ccc-222222222222",
             tool_name="get_process_tree",
             input_hash=hash_input({"process_id": "4.0"}),
             response_ms=resp.response_ms,
