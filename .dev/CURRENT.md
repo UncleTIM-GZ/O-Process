@@ -16,15 +16,15 @@ P6 — MCP Spec 2025-11-25 全面合规审查修复（待开始）。
 | P6-5 | destructiveHint=False 显式声明 | P1 | Done |
 | P6-6 | resources.py 测试覆盖率 → 80%+ | P1 | Done |
 | P6-7 | auth.py 测试覆盖率 → 80%+ | P1 | Done |
-| P6-8 | MCP Prompts (3 个引导模板) | P2 | Pending |
-| P6-9 | MCP logging capability | P2 | Pending |
+| P6-8 | MCP Prompts (3 个引导模板) | P2 | Done |
+| P6-9 | MCP logging capability | P2 | Done |
 | P6-10 | atexit 线程安全修复 | P2 | Done |
 
 ## 审查基线
 
 - MUST 合规: 16/16 (100%)
 - SHOULD 合规: ~85%
-- 覆盖率: 85.86%
+- 覆盖率: 94.50%
 - 规范版本: MCP Spec 2025-11-25
 
 ## 历史

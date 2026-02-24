@@ -15,6 +15,7 @@ import os
 from fastmcp import FastMCP
 
 from oprocess.config import get_config
+from oprocess.prompts import register_prompts
 from oprocess.tools.rate_limit import RateLimitMiddleware
 from oprocess.tools.registry import register_tools
 from oprocess.tools.resources import register_resources
@@ -52,6 +53,7 @@ mcp.add_middleware(RateLimitMiddleware(
 ))
 register_tools(mcp)
 register_resources(mcp)
+register_prompts(mcp)
 
 _VALID_TRANSPORTS = ("stdio", "sse", "streamable-http")
 
