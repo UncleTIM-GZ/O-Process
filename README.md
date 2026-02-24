@@ -5,8 +5,8 @@ AI-native process classification MCP Server. Query 2,325 processes and 3,910 KPI
 ## Quick Start
 
 ```bash
-# Install
-uv sync
+# Install (includes embedding + dev dependencies)
+uv sync --all-extras
 
 # Run MCP Server (stdio — default)
 uv run python -m oprocess.server
@@ -80,6 +80,14 @@ export OPROCESS_API_KEY="your-secret-key"
 
 When `OPROCESS_API_KEY` is not set, authentication is disabled (safe for stdio mode).
 
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_API_KEY` | For embedding | Google AI Studio API key (gemini-embedding-001) |
+| `OPROCESS_API_KEY` | For HTTP auth | Bearer token for SSE/HTTP transports |
+| `LOG_LEVEL` | No | Logging level (default: WARNING) |
+
 ## Logging
 
 Structured logging via Python `logging` module:
@@ -115,8 +123,8 @@ Bilingual: Chinese (zh) + English (en).
 ## Development
 
 ```bash
-# Install dev dependencies
-uv sync
+# Install all dependencies
+uv sync --all-extras
 
 # Lint
 ruff check .
@@ -134,7 +142,7 @@ ruff check . && pytest && pytest --benchmark-only
 - **MCP Framework**: FastMCP 3.x
 - **Validation**: Pydantic 2.x (`Annotated[..., Field(...)]`)
 - **Database**: SQLite + sqlite-vec (vector search)
-- **Embeddings**: text-embedding-3-small (1536-dim, pre-computed)
+- **Embeddings**: gemini-embedding-001 (768-dim, via Google AI Studio)
 - **Packaging**: uv + hatchling
 
 ## License
