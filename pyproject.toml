@@ -1,6 +1,6 @@
 [project]
 name = "oprocess"
-version = "0.1.0"
+version = "0.3.0"
 description = "AI-native process classification MCP Server"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -24,17 +24,13 @@ REAL_DB = Path("data/oprocess.db")
 
 @pytest.fixture(autouse=True)
 def _reset_gateways():
-    """Reset the lazy-init gateways between tests."""
-    import oprocess.tools.registry as reg
-    import oprocess.tools.search as search
+    """Reset the shared gateway singleton between tests."""
+    import oprocess.gateway as gw
 
-    old_reg = reg._gateway
-    old_search = search._gateway
-    reg._gateway = None
-    search._gateway = None
+    old = gw._shared_gateway
+    gw._shared_gateway = None
     yield
-    reg._gateway = old_reg
-    search._gateway = old_search
+    gw._shared_gateway = old
 
 
 @pytest.fixture

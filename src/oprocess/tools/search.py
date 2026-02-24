@@ -12,7 +12,7 @@ from pydantic import Field
 
 from oprocess.db.connection import get_shared_connection
 from oprocess.db.queries import search_processes
-from oprocess.gateway import PassthroughGateway
+from oprocess.gateway import get_shared_gateway
 from oprocess.tools.helpers import (
     apply_boundary,
     build_search_provenance,
@@ -28,18 +28,6 @@ _READ_ONLY_OPEN = ToolAnnotations(
 Lang = Annotated[
     Literal["zh", "en"], Field(description="Language"),
 ]
-
-_gateway: PassthroughGateway | None = None
-
-
-def _get_gateway() -> PassthroughGateway:
-    """Lazy-init gateway with audit_conn from shared connection."""
-    global _gateway
-    if _gateway is None:
-        conn = get_shared_connection()
-        _gateway = PassthroughGateway(audit_conn=conn)
-    return _gateway
-
 
 def register_search_tools(mcp) -> None:
     """Register search-related tool functions on the FastMCP instance."""
@@ -64,7 +52,7 @@ def register_search_tools(mcp) -> None:
         Returns matching nodes with id, name, description, score.
         Low-confidence queries trigger BoundaryResponse."""
         conn = get_shared_connection()
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "search_process",
             search_processes,
             conn=conn,
@@ -103,7 +91,7 @@ def register_search_tools(mcp) -> None:
         Optionally filter by industry tag.
         Low-confidence triggers BoundaryResponse."""
         conn = get_shared_connection()
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "map_role_to_processes",
             search_processes,
             conn=conn,

@@ -24,7 +24,7 @@ from oprocess.db.queries import (
     get_subtree,
     validate_lang,
 )
-from oprocess.gateway import PassthroughGateway
+from oprocess.gateway import get_shared_gateway
 from oprocess.tools.export import build_responsibility_doc
 from oprocess.tools.helpers import (
     build_hierarchy_provenance,
@@ -34,17 +34,6 @@ from oprocess.tools.helpers import (
 )
 from oprocess.tools.search import register_search_tools
 from oprocess.tools.serialization import response_to_json
-
-_gateway: PassthroughGateway | None = None
-
-
-def _get_gateway() -> PassthroughGateway:
-    """Lazy-init gateway with audit_conn from shared connection."""
-    global _gateway
-    if _gateway is None:
-        conn = get_shared_connection()
-        _gateway = PassthroughGateway(audit_conn=conn)
-    return _gateway
 
 # -- Tool annotations --
 _READ_ONLY = ToolAnnotations(
@@ -92,7 +81,7 @@ def register_tools(mcp) -> None:
         and nested children up to max_depth levels.
         Use to explore the 5-level process taxonomy."""
         conn = get_shared_connection()
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "get_process_tree",
             get_subtree,
             conn=conn,
@@ -133,7 +122,7 @@ def register_tools(mcp) -> None:
                 "count": len(kpis),
             }
 
-        resp = _get_gateway().execute("get_kpi_suggestions", _get_kpis)
+        resp = get_shared_gateway().execute("get_kpi_suggestions", _get_kpis)
         process = get_process(conn, process_id)
         if process:
             resp.provenance_chain = build_lookup_provenance(
@@ -151,7 +140,7 @@ def register_tools(mcp) -> None:
         Accepts comma-separated process IDs. Returns differences in name, description,
         domain, level, KPI count, and hierarchy path for each node."""
         conn = get_shared_connection()
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "compare_processes",
             compare_process_nodes,
             conn=conn,
@@ -205,7 +194,7 @@ def register_tools(mcp) -> None:
                 return responsibilities_to_md(data, lang)
             return data
 
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "get_responsibilities", _responsibilities,
         )
         resp.provenance_chain = build_hierarchy_provenance(
@@ -229,7 +218,7 @@ def register_tools(mcp) -> None:
         Accepts one or more process IDs. Sections: role
         overview, responsibilities, KPIs, provenance."""
         conn = get_shared_connection()
-        resp = _get_gateway().execute(
+        resp = get_shared_gateway().execute(
             "export_responsibility_doc",
             build_responsibility_doc,
             conn=conn,
@@ -255,13 +244,15 @@ def register_tools(mcp) -> None:
         Returns JSON with status, server name, process/KPI counts,
         and sqlite-vec extension availability."""
         conn = get_shared_connection()
-        return json.dumps(
-            {
+
+        def _health():
+            return {
                 "status": "ok",
                 "server": "O'Process",
                 "total_processes": count_processes(conn),
                 "total_kpis": count_kpis(conn),
                 "vec_available": check_vec_available(conn),
-            },
-            ensure_ascii=False,
-        )
+            }
+
+        resp = get_shared_gateway().execute("health_check", _health)
+        return json.dumps(resp.result, ensure_ascii=False)

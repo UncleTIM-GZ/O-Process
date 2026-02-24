@@ -125,3 +125,21 @@ class PassthroughGateway(ToolGatewayInterface):
             session_id=self.session_id,
             response_ms=elapsed_ms,
         )
+
+
+_shared_gateway: PassthroughGateway | None = None
+
+
+def get_shared_gateway() -> PassthroughGateway:
+    """Return the process-wide gateway singleton.
+
+    Both registry.py and search.py share this instance so that
+    all tool calls within a session use the same session_id.
+    """
+    global _shared_gateway
+    if _shared_gateway is None:
+        from oprocess.db.connection import get_shared_connection
+
+        conn = get_shared_connection()
+        _shared_gateway = PassthroughGateway(audit_conn=conn)
+    return _shared_gateway

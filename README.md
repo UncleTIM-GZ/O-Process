@@ -47,7 +47,7 @@ Add to `claude_desktop_config.json`:
 | `get_responsibilities` | Generate role responsibilities | `process_id`, `lang`, `output_format` (json/markdown) |
 | `map_role_to_processes` | Map job role to relevant processes | `role_description` (1-500 chars), `lang`, `limit`, `industry` |
 | `export_responsibility_doc` | Export full responsibility document | `process_ids` (1+), `lang`, `role_name` |
-| `ping` | Health check — server status and data counts | _(none)_ |
+| `health_check` | Health check — server status and data counts | _(none)_ |
 
 All tools return `ToolResponse` JSON with `result`, `provenance_chain`, `session_id`, and `response_ms`.
 
@@ -86,6 +86,7 @@ When `OPROCESS_API_KEY` is not set, authentication is disabled (safe for stdio m
 |----------|----------|-------------|
 | `GOOGLE_API_KEY` | For embedding | Google AI Studio API key (gemini-embedding-001) |
 | `OPROCESS_API_KEY` | For HTTP auth | Bearer token for SSE/HTTP transports |
+| `OPROCESS_ALLOWED_ORIGINS` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost:3000,https://app.example.com`) |
 | `LOG_LEVEL` | No | Logging level (default: WARNING) |
 
 ## Logging
@@ -98,6 +99,18 @@ export LOG_LEVEL=INFO   # DEBUG, INFO, WARNING, ERROR
 
 # Logs include: tool name, session ID, response time (ms)
 ```
+
+## Configuration
+
+Server behavior can be tuned via `[tool.oprocess]` in `pyproject.toml`:
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `boundary_threshold` | `0.45` | Cosine distance threshold for BoundaryResponse |
+| `audit_log_enabled` | `true` | Enable/disable SessionAuditLog |
+| `default_language` | `"zh"` | Default language (zh/en) |
+| `rate_limit_max_calls` | `60` | Max tool calls per client per window |
+| `rate_limit_window_seconds` | `60` | Rate limit window duration (seconds) |
 
 ## Governance-Lite
 
