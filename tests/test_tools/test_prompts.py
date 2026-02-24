@@ -204,3 +204,16 @@ class TestPromptDiscovery:
         assert "generate_job_description" in names
         assert "kpi_review" in names
         assert len(names) == 3
+
+    def test_all_prompts_have_title(self, prompt_app):
+        """P7/S11: All prompts SHOULD have a title field."""
+        prompts = asyncio.run(prompt_app.list_prompts())
+        expected = {
+            "analyze_process": "Process Analysis Workflow",
+            "generate_job_description": "Job Description Generator",
+            "kpi_review": "KPI Review Workflow",
+        }
+        for p in prompts:
+            assert p.title, f"Prompt {p.name} missing title"
+            if p.name in expected:
+                assert p.title == expected[p.name]

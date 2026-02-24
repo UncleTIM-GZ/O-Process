@@ -69,7 +69,7 @@ def register_tools(mcp) -> None:
     # Register search tools from search.py
     register_search_tools(mcp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="Process Tree")
     def get_process_tree(
         process_id: ProcessId,
         max_depth: Annotated[
@@ -96,7 +96,7 @@ def register_tools(mcp) -> None:
 
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="KPI Suggestions")
     def get_kpi_suggestions(
         process_id: ProcessId,
     ) -> str:
@@ -132,7 +132,7 @@ def register_tools(mcp) -> None:
 
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="Process Comparison")
     def compare_processes(
         process_ids: ProcessIdList,
     ) -> str:
@@ -150,7 +150,7 @@ def register_tools(mcp) -> None:
 
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="Role Responsibilities")
     def get_responsibilities(
         process_id: ProcessId,
         lang: Lang = "zh",
@@ -204,7 +204,7 @@ def register_tools(mcp) -> None:
 
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="Responsibility Document Export")
     def export_responsibility_doc(
         process_ids: ProcessIdListOpt,
         lang: Lang = "zh",
@@ -238,7 +238,7 @@ def register_tools(mcp) -> None:
 
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY)
+    @mcp.tool(annotations=_READ_ONLY, title="Health Check")
     def health_check() -> str:
         """Health check for the O'Process MCP server.
 

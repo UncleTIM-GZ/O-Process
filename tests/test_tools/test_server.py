@@ -174,6 +174,59 @@ class TestStructuredLogging:
         assert oprocess_logger.getEffectiveLevel() <= logging.DEBUG
 
 
+class TestToolTitles:
+    """P7: All tools SHOULD have a title field."""
+
+    def test_all_tools_have_title(self):
+        import asyncio
+
+        from oprocess.server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        expected = {
+            "search_process": "Process Search",
+            "get_process_tree": "Process Tree",
+            "get_kpi_suggestions": "KPI Suggestions",
+            "compare_processes": "Process Comparison",
+            "get_responsibilities": "Role Responsibilities",
+            "map_role_to_processes": "Role-Process Mapping",
+            "export_responsibility_doc": "Responsibility Document Export",
+            "health_check": "Health Check",
+        }
+        for tool in tools:
+            assert tool.title, f"Tool {tool.name} missing title"
+            if tool.name in expected:
+                assert tool.title == expected[tool.name]
+
+
+class TestAuditLogEnabled:
+    """P7/P3-2: audit_log_enabled config controls audit logging."""
+
+    def test_gateway_no_audit_when_disabled(self, monkeypatch):
+        import oprocess.gateway as gw_mod
+
+        gw_mod._shared_gateway = None
+        monkeypatch.setattr(
+            "oprocess.config.get_config",
+            lambda: {"audit_log_enabled": False},
+        )
+        gateway = gw_mod.get_shared_gateway()
+        assert gateway.audit_conn is None
+        gw_mod._shared_gateway = None
+
+    def test_gateway_audit_when_enabled(self, monkeypatch):
+        import oprocess.gateway as gw_mod
+
+        gw_mod._shared_gateway = None
+        monkeypatch.setattr(
+            "oprocess.config.get_config",
+            lambda: {"audit_log_enabled": True},
+        )
+        gateway = gw_mod.get_shared_gateway()
+        assert gateway.audit_conn is not None
+        gw_mod._shared_gateway = None
+
+
 class TestToolResponse:
     def test_defaults(self):
         resp = ToolResponse(result={"data": 1})

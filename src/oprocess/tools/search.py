@@ -33,7 +33,7 @@ Lang = Annotated[
 def register_search_tools(mcp) -> None:
     """Register search-related tool functions on the FastMCP instance."""
 
-    @mcp.tool(annotations=_READ_ONLY_OPEN)
+    @mcp.tool(annotations=_READ_ONLY_OPEN, title="Process Search")
     def search_process(
         query: Annotated[
             str, Field(min_length=1, max_length=500),
@@ -70,7 +70,7 @@ def register_search_tools(mcp) -> None:
         apply_boundary(query, results, resp)
         return response_to_json(resp)
 
-    @mcp.tool(annotations=_READ_ONLY_OPEN)
+    @mcp.tool(annotations=_READ_ONLY_OPEN, title="Role-Process Mapping")
     def map_role_to_processes(
         role_description: Annotated[
             str,

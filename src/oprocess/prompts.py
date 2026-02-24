@@ -53,7 +53,7 @@ def _sanitize_role_name(name: str) -> str:
 def register_prompts(mcp) -> None:
     """Register all prompt templates on the FastMCP instance."""
 
-    @mcp.prompt()
+    @mcp.prompt(title="Process Analysis Workflow")
     def analyze_process(process_id: str, lang: str = "zh") -> str:
         """Guided workflow for analyzing a process node."""
         _validate_process_id(process_id)
@@ -80,7 +80,7 @@ def register_prompts(mcp) -> None:
             f"5. Output a structured analysis report"
         )
 
-    @mcp.prompt()
+    @mcp.prompt(title="Job Description Generator")
     def generate_job_description(
         process_ids: str, role_name: str, lang: str = "zh",
     ) -> str:
@@ -110,7 +110,7 @@ def register_prompts(mcp) -> None:
             f"4. Verify the provenance appendix for data sources"
         )
 
-    @mcp.prompt()
+    @mcp.prompt(title="KPI Review Workflow")
     def kpi_review(process_id: str, lang: str = "zh") -> str:
         """Guided workflow for reviewing KPIs of a process."""
         _validate_process_id(process_id)
