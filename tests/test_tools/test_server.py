@@ -74,6 +74,18 @@ class TestGateway:
         assert len(logs) == 1
 
 
+class TestServerIcon:
+    """P8/Y3: Server SHOULD have an icon."""
+
+    def test_server_has_icon(self):
+        from oprocess.server import mcp
+
+        assert mcp.icons, "Server should have at least one icon"
+        icon = mcp.icons[0]
+        assert icon.src.startswith("data:image/svg+xml;base64,")
+        assert icon.mimeType == "image/svg+xml"
+
+
 class TestHealthCheckTool:
     def test_health_check_registered(self):
         import asyncio
