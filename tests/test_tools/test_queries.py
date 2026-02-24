@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from oprocess.db.queries import (
+    _escape_like,
     build_path_string,
     count_kpis,
     count_processes,
@@ -161,3 +162,25 @@ class TestValidateLang:
     def test_invalid_lang_direct(self):
         with pytest.raises(ValueError, match="Invalid language"):
             validate_lang("french")
+
+
+class TestEscapeLike:
+    def test_escapes_percent(self):
+        assert _escape_like("test%query") == "test\\%query"
+
+    def test_escapes_underscore(self):
+        assert _escape_like("test_query") == "test\\_query"
+
+    def test_escapes_backslash(self):
+        assert _escape_like("test\\query") == "test\\\\query"
+
+    def test_no_escape_needed(self):
+        assert _escape_like("hello") == "hello"
+
+    def test_combined(self):
+        assert _escape_like("a%b_c\\d") == "a\\%b\\_c\\\\d"
+
+    def test_search_with_wildcards_no_unintended_match(self, populated_db):
+        """Searching for literal '%' should not match everything."""
+        results = search_processes(populated_db, "%", lang="zh")
+        assert len(results) == 0
