@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
-import json
+import logging
 import sqlite3
 
+from oprocess.db.embedder import EmbedProvider, get_embedder
+from oprocess.db.row_utils import row_to_process
+from oprocess.db.vector_search import has_vec_table, vector_search
+
+logger = logging.getLogger(__name__)
+
 _VALID_LANGS = frozenset({"zh", "en"})
+
+# Module-level singleton for embedder (lazy init)
+_embedder: EmbedProvider | None = None
+_embedder_checked = False
 
 
 def validate_lang(lang: str) -> None:
@@ -22,7 +32,7 @@ def get_process(conn: sqlite3.Connection, process_id: str) -> dict | None:
     ).fetchone()
     if not row:
         return None
-    return _row_to_process(row)
+    return row_to_process(row)
 
 
 def get_children(conn: sqlite3.Connection, parent_id: str) -> list[dict]:
@@ -31,7 +41,7 @@ def get_children(conn: sqlite3.Connection, parent_id: str) -> list[dict]:
         "SELECT * FROM processes WHERE parent_id = ? ORDER BY id",
         (parent_id,),
     ).fetchall()
-    return [_row_to_process(r) for r in rows]
+    return [row_to_process(r) for r in rows]
 
 
 def get_subtree(
@@ -53,6 +63,15 @@ def get_subtree(
     return _build(root, 0)
 
 
+def _get_embedder() -> EmbedProvider | None:
+    """Get module-level embedder singleton (lazy init)."""
+    global _embedder, _embedder_checked
+    if not _embedder_checked:
+        _embedder = get_embedder()
+        _embedder_checked = True
+    return _embedder
+
+
 def search_processes(
     conn: sqlite3.Connection,
     query: str,
@@ -60,16 +79,43 @@ def search_processes(
     limit: int = 10,
     level: int | None = None,
 ) -> list[dict]:
-    """Search processes by text matching (SQL LIKE).
+    """Search processes — vector search with LIKE fallback.
 
-    Returns list of process dicts sorted by level then id.
-    Vector search is reserved for future OpenAI embedding upgrade.
+    Uses Gemini embedding + sqlite-vec when available,
+    falls back to SQL LIKE when no embedder or vec table.
     """
     validate_lang(lang)
+    embedder = _get_embedder()
+    if embedder and has_vec_table(conn):
+        try:
+            vecs = embedder.embed([query])
+            results = vector_search(conn, vecs[0], limit, level)
+            if results:
+                return results
+        except Exception:
+            logger.warning("Vector search failed, falling back to LIKE")
+    return _search_like(conn, query, lang, limit, level)
+
+
+def _escape_like(s: str) -> str:
+    """Escape LIKE wildcards so they match literally."""
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _search_like(
+    conn: sqlite3.Connection,
+    query: str,
+    lang: str,
+    limit: int,
+    level: int | None,
+) -> list[dict]:
+    """Text-based LIKE search (fallback)."""
     col = f"name_{lang}"
     desc_col = f"description_{lang}"
-    pattern = f"%{query}%"
-    conditions = [f"({col} LIKE ? OR {desc_col} LIKE ?)"]
+    pattern = f"%{_escape_like(query)}%"
+    conditions = [
+        f"({col} LIKE ? ESCAPE '\\' OR {desc_col} LIKE ? ESCAPE '\\')",
+    ]
     params: list = [pattern, pattern]
     if level is not None:
         conditions.append("level = ?")
@@ -80,7 +126,7 @@ def search_processes(
         f"SELECT * FROM processes WHERE {where} ORDER BY level, id LIMIT ?",
         params,
     ).fetchall()
-    return [_row_to_process(r) for r in rows]
+    return [row_to_process(r) for r in rows]
 
 
 def get_kpis_for_process(
@@ -102,7 +148,7 @@ def get_processes_by_level(
         "SELECT * FROM processes WHERE level = ? ORDER BY id",
         (level,),
     ).fetchall()
-    return [_row_to_process(r) for r in rows]
+    return [row_to_process(r) for r in rows]
 
 
 def get_ancestor_chain(
@@ -137,16 +183,6 @@ def count_kpis(conn: sqlite3.Connection) -> int:
     """Count total KPIs."""
     row = conn.execute("SELECT COUNT(*) FROM kpis").fetchone()
     return row[0]
-
-
-def _row_to_process(row: sqlite3.Row) -> dict:
-    """Convert a database row to a process dict."""
-    d = dict(row)
-    d["source"] = json.loads(d["source"])
-    d["tags"] = json.loads(d["tags"])
-    d["kpi_refs"] = json.loads(d["kpi_refs"])
-    d["provenance_eligible"] = bool(d["provenance_eligible"])
-    return d
 
 
 def _row_to_kpi(row: sqlite3.Row) -> dict:

@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import atexit
+import logging
 import sqlite3
 from pathlib import Path
+
+from oprocess.db.embedder import GEMINI_DIM
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_DB_PATH = Path("data/oprocess.db")
 
@@ -18,7 +23,20 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    _load_sqlite_vec(conn)
     return conn
+
+
+def _load_sqlite_vec(conn: sqlite3.Connection) -> None:
+    """Load sqlite-vec extension if available."""
+    try:
+        import sqlite_vec
+
+        conn.enable_load_extension(True)
+        sqlite_vec.load(conn)
+        conn.enable_load_extension(False)
+    except (ImportError, Exception):
+        pass  # sqlite-vec not installed — skip silently
 
 
 def get_shared_connection(
@@ -49,7 +67,20 @@ def _close_shared() -> None:
 def init_schema(conn: sqlite3.Connection) -> None:
     """Create all tables if they don't exist, then apply migrations."""
     conn.executescript(SCHEMA_SQL)
+    _create_vec_table(conn)
     _migrate_audit_request_id(conn)
+
+
+def _create_vec_table(conn: sqlite3.Connection) -> None:
+    """Create sqlite-vec virtual table for vector search."""
+    try:
+        conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS vec_processes "
+            f"USING vec0(process_id TEXT PRIMARY KEY, embedding float[{GEMINI_DIM}])",
+        )
+        conn.commit()
+    except Exception:
+        logger.debug("sqlite-vec not available, skipping vec table")
 
 
 def _migrate_audit_request_id(conn: sqlite3.Connection) -> None:

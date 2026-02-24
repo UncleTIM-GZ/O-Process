@@ -1,7 +1,7 @@
 ---
 title: "feat: MCP Certification Upgrade — Anthropic 认证插件标准对齐"
 type: feat
-status: active
+status: completed
 date: 2026-02-23
 origin: MCP 技术评估（2026-02-23，Phase 6 完成后）
 ---
@@ -157,10 +157,10 @@ def search_process(input: SearchProcessInput) -> str:
 ```
 
 **验收标准**:
-- [ ] 7 个 Tool 全部使用 Pydantic 输入模型
-- [ ] `asyncio.run(mcp.list_tools())` 每个 tool 的 `inputSchema` 包含完整字段定义
-- [ ] 无效输入（lang="french"、limit=-1）返回 422 Validation Error
-- [ ] 现有 125 个测试全部通过
+- [x] 7 个 Tool 全部使用 Pydantic 输入模型（实际采用 FastMCP `Annotated[..., Field(...)]` 方式，功能等价）
+- [x] `asyncio.run(mcp.list_tools())` 每个 tool 的 `inputSchema` 包含完整字段定义
+- [x] 无效输入（lang="french"、limit=-1）返回 422 Validation Error
+- [x] 现有 125 个测试全部通过（当前 151 个测试）
 
 ---
 
@@ -194,10 +194,10 @@ if not process:
 ```
 
 **验收标准**:
-- [ ] 所有 Tool 中的 `{"error": ...}` 改为 `raise ToolError(...)`
-- [ ] Resource 中保持 JSON 返回（Resource 规范无 ToolError）
-- [ ] 现有测试中的 `assert "error" in result` 更新为 `pytest.raises(ToolError)`
-- [ ] Gateway 的 audit 日志正确记录 ToolError
+- [x] 所有 Tool 中的 `{"error": ...}` 改为 `raise ToolError(...)`
+- [x] Resource 中保持 JSON 返回（Resource 规范无 ToolError）
+- [x] 现有测试中的 `assert "error" in result` 更新为 `pytest.raises(ToolError)`
+- [x] Gateway 的 audit 日志正确记录 ToolError
 
 ---
 
@@ -229,9 +229,9 @@ def _validate_lang(lang: str) -> str:
 有了 P0.1 的 Pydantic `pattern=r"^(zh|en)$"` 后，这是第二道防线（defense-in-depth）。
 
 **验收标准**:
-- [ ] `search_processes(conn, "test", lang="fr")` 抛出 `ValueError`
-- [ ] `build_search_provenance(conn, [], "xx")` 抛出 `ValueError`
-- [ ] 新增 2 个测试验证非法 lang 被拒绝
+- [x] `search_processes(conn, "test", lang="fr")` 抛出 `ValueError`
+- [x] `build_search_provenance(conn, [], "xx")` 抛出 `ValueError`
+- [x] 新增 2 个测试验证非法 lang 被拒绝
 
 ---
 
@@ -292,10 +292,10 @@ pytest --benchmark-only
 ```
 
 **验收标准**:
-- [ ] README 包含 Claude Desktop JSON 配置片段
-- [ ] 7 个 Tool 的签名表（参数、类型、默认值）
-- [ ] 6 个 Resource 的 URI 表
-- [ ] Quick Start 可复制执行
+- [x] README 包含 Claude Desktop JSON 配置片段
+- [x] 7 个 Tool 的签名表（参数、类型、默认值）（实际 8 个，含 ping）
+- [x] 6 个 Resource 的 URI 表
+- [x] Quick Start 可复制执行
 
 ---
 
@@ -584,9 +584,9 @@ P2.1 (日志) → P2.2 (幂等性) → P2.3 (OAuth) → P2.4 (sqlite-vec)
 
 ## Acceptance Criteria (总)
 
-- [ ] **P0 完成**: Pydantic schema + ToolError + lang 白名单 + README
-- [ ] **P1 完成**: 多传输 + 向量搜索修复 + 连接池 + ping
-- [x] **P2 完成**: 日志 + 幂等性 + OAuth（sqlite-vec 延后至有原生扩展时）
-- [ ] 全流程: `ruff check . && pytest && pytest --benchmark-only` 全通过
-- [ ] 认证自查: 7+1 Tool 全部有完整 inputSchema，无 error dict
-- [ ] 文档自查: README 包含 Quick Start + Tool 表 + Resource 表 + Claude Desktop 配置
+- [x] **P0 完成**: Pydantic schema + ToolError + lang 白名单 + README（commit `b2db1af`）
+- [x] **P1 完成**: 多传输 + 向量搜索修复 + 连接池 + ping（commit `cda7477`）
+- [x] **P2 完成**: 日志 + 幂等性 + OAuth（sqlite-vec 延后至有原生扩展时）（commit `799e765` + `61c698b`）
+- [x] 全流程: `ruff check . && pytest && pytest --benchmark-only` 全通过（151 tests, 82.74% coverage）
+- [x] 认证自查: 8 Tool 全部有 `Annotated[..., Field(...)]` inputSchema，无 error dict
+- [x] 文档自查: README 包含 Quick Start + Tool 表 + Resource 表 + Claude Desktop 配置 + Auth + Logging

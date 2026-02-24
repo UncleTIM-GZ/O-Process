@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from oprocess.db.connection import get_connection, init_schema
+from oprocess.db.embedder import GEMINI_DIM
 
 
 @pytest.fixture
@@ -66,7 +67,7 @@ def populated_db(db_conn: sqlite3.Connection) -> sqlite3.Connection:
     return db_conn
 
 
-def _make_embedding(keyword: str, dim: int = 384) -> bytes:
+def _make_embedding(keyword: str, dim: int = GEMINI_DIM) -> bytes:
     """Create a deterministic test embedding from a keyword.
 
     Uses PYTHONHASHSEED-safe approach: fixed positions per character.
@@ -78,6 +79,12 @@ def _make_embedding(keyword: str, dim: int = 384) -> bytes:
     norm = math.sqrt(sum(v * v for v in vec)) or 1.0
     vec = [v / norm for v in vec]
     return struct.pack(f"{dim}f", *vec)
+
+
+def _make_embedding_list(keyword: str, dim: int = GEMINI_DIM) -> list[float]:
+    """Create a deterministic test embedding as float list."""
+    blob = _make_embedding(keyword, dim)
+    return list(struct.unpack(f"{dim}f", blob))
 
 
 @pytest.fixture
@@ -98,3 +105,23 @@ def populated_db_with_embeddings(
     )
     populated_db.commit()
     return populated_db
+
+
+@pytest.fixture
+def populated_db_with_vec(
+    populated_db_with_embeddings: sqlite3.Connection,
+) -> sqlite3.Connection:
+    """Database with embeddings in BOTH process_embeddings and vec_processes."""
+    conn = populated_db_with_embeddings
+    # Copy embeddings into vec_processes for sqlite-vec search
+    rows = conn.execute(
+        "SELECT process_id, embedding FROM process_embeddings",
+    ).fetchall()
+    for row in rows:
+        conn.execute(
+            "INSERT OR REPLACE INTO vec_processes "
+            "(process_id, embedding) VALUES (?, ?)",
+            (row["process_id"], bytes(row["embedding"])),
+        )
+    conn.commit()
+    return conn
