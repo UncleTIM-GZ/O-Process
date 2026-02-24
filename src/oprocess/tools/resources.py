@@ -15,7 +15,9 @@ The `role_mappings` table is reserved for future caching layer.
 
 from __future__ import annotations
 
-import json
+import re
+
+from fastmcp.exceptions import ResourceError
 
 from oprocess.db.connection import SCHEMA_SQL, get_shared_connection
 from oprocess.db.queries import (
@@ -26,10 +28,27 @@ from oprocess.db.queries import (
     search_processes,
 )
 from oprocess.governance.audit import get_session_log
+from oprocess.tools.serialization import to_json
+
+_PROCESS_ID_RE = re.compile(r"^\d+(\.\d+)*$")
+_SESSION_ID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 
-def _to_json(data: object) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2)
+def _validate_process_id(process_id: str) -> None:
+    """Validate process_id URI parameter format."""
+    if not _PROCESS_ID_RE.match(process_id):
+        msg = f"Invalid process ID format: {process_id}"
+        raise ResourceError(msg)
+
+
+def _validate_session_id(session_id: str) -> None:
+    """Validate session_id URI parameter format (UUID4)."""
+    if not _SESSION_ID_RE.match(session_id):
+        msg = f"Invalid session ID format: {session_id}"
+        raise ResourceError(msg)
 
 
 def register_resources(mcp) -> None:
@@ -38,21 +57,20 @@ def register_resources(mcp) -> None:
     @mcp.resource("oprocess://process/{process_id}", mime_type="application/json")
     def get_process_resource(process_id: str) -> str:
         """Get complete information for a single process node."""
+        _validate_process_id(process_id)
         conn = get_shared_connection()
         process = get_process(conn, process_id)
         if not process:
-            return _to_json({
-                "not_found": process_id,
-                "message": f"Process {process_id} not found",
-            })
-        return _to_json(process)
+            msg = f"Process {process_id} not found"
+            raise ResourceError(msg)
+        return to_json(process)
 
     @mcp.resource("oprocess://category/list", mime_type="application/json")
     def get_category_list() -> str:
         """Get all top-level (L1) process categories."""
         conn = get_shared_connection()
         processes = get_processes_by_level(conn, level=1)
-        return _to_json([
+        return to_json([
             {
                 "id": p["id"],
                 "name_zh": p["name_zh"],
@@ -72,7 +90,7 @@ def register_resources(mcp) -> None:
         results = search_processes(
             conn, role_name, lang="zh", limit=10,
         )
-        return _to_json([
+        return to_json([
             {
                 "process_id": r["id"],
                 "name_zh": r["name_zh"],
@@ -85,8 +103,9 @@ def register_resources(mcp) -> None:
     @mcp.resource("oprocess://audit/session/{session_id}", mime_type="application/json")
     def get_audit_session(session_id: str) -> str:
         """Get audit log entries for a specific session."""
+        _validate_session_id(session_id)
         conn = get_shared_connection()
-        return _to_json(get_session_log(conn, session_id))
+        return to_json(get_session_log(conn, session_id))
 
     @mcp.resource("oprocess://schema/sqlite", mime_type="text/plain")
     def get_schema() -> str:
@@ -97,10 +116,10 @@ def register_resources(mcp) -> None:
     def get_stats() -> str:
         """Get O'Process framework statistics."""
         conn = get_shared_connection()
-        return _to_json({
+        return to_json({
             "total_processes": count_processes(conn),
             "total_kpis": count_kpis(conn),
-            "version": "0.1.0",
+            "version": "0.3.0",
             "sources": [
                 "APQC PCF 7.4", "ITIL 4", "SCOR 12.0", "AI-era",
             ],

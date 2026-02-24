@@ -23,14 +23,18 @@ REAL_DB = Path("data/oprocess.db")
 
 
 @pytest.fixture(autouse=True)
-def _reset_gateway():
-    """Reset the lazy-init gateway between tests."""
+def _reset_gateways():
+    """Reset the lazy-init gateways between tests."""
     import oprocess.tools.registry as reg
+    import oprocess.tools.search as search
 
-    old = reg._gateway
+    old_reg = reg._gateway
+    old_search = search._gateway
     reg._gateway = None
+    search._gateway = None
     yield
-    reg._gateway = old
+    reg._gateway = old_reg
+    search._gateway = old_search
 
 
 @pytest.fixture
@@ -65,16 +69,16 @@ def _call(tool_name: str, args: dict | None = None) -> dict:
     return json.loads(text)
 
 
-class TestPingTool:
-    """Ping doesn't need thread-safe conn (uses count queries only)."""
+class TestHealthCheckTool:
+    """Health check (renamed from ping to avoid MCP built-in conflict)."""
 
     def test_returns_status_ok(self, _thread_safe_conn):
-        data = _call("ping")
+        data = _call("health_check")
         assert data["status"] == "ok"
         assert data["server"] == "O'Process"
 
     def test_returns_counts(self, _thread_safe_conn):
-        data = _call("ping")
+        data = _call("health_check")
         assert data["total_processes"] >= 2325
         assert data["total_kpis"] >= 3910
 
@@ -118,9 +122,10 @@ class TestGetProcessTreeTool:
         )
         assert "children" in data["result"]
 
-    def test_not_found(self, _thread_safe_conn):
-        data = _call("get_process_tree", {"process_id": "99.99"})
-        assert data["result"] is None
+    def test_not_found_raises(self, _thread_safe_conn):
+        """P0-1: get_process_tree must raise ToolError for invalid IDs."""
+        with pytest.raises(Exception):
+            _call("get_process_tree", {"process_id": "99.99"})
 
 
 class TestGetKpiSuggestionsTool:

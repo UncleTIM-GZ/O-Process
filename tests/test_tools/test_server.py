@@ -21,35 +21,46 @@ class TestGateway:
         assert resp.session_id
 
     def test_session_id(self):
-        gw = PassthroughGateway(session_id="test-123")
+        sid = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+        gw = PassthroughGateway(session_id=sid)
         resp = gw.execute("test", lambda: None)
-        assert resp.session_id == "test-123"
+        assert resp.session_id == sid
+
+    def test_session_id_full_uuid(self):
+        """P2-6: Gateway generates full UUID4 session_id."""
+        gw = PassthroughGateway()
+        # Full UUID4 is 36 chars (8-4-4-4-12 with dashes)
+        assert len(gw.session_id) == 36
+        assert gw.session_id.count("-") == 4
 
     def test_base_gateway_execute(self):
-        gw = ToolGatewayInterface(session_id="base-1")
+        sid = "b1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+        gw = ToolGatewayInterface(session_id=sid)
         resp = gw.execute("t", lambda x: x * 2, x=5)
         assert resp.result == 10
-        assert resp.session_id == "base-1"
+        assert resp.session_id == sid
 
     def test_passthrough_with_audit(self, db_conn):
         from oprocess.governance.audit import get_session_log
 
+        sid = "c1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
         gw = PassthroughGateway(
-            session_id="audit-test", audit_conn=db_conn,
+            session_id=sid, audit_conn=db_conn,
         )
         resp = gw.execute(
             "search", lambda query, lang: [query], query="q", lang="zh",
         )
         assert resp.result == ["q"]
-        logs = get_session_log(db_conn, "audit-test")
+        logs = get_session_log(db_conn, sid)
         assert len(logs) == 1
         assert logs[0]["tool_name"] == "search"
 
     def test_passthrough_error_with_audit(self, db_conn):
         from oprocess.governance.audit import get_session_log
 
+        sid = "d1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
         gw = PassthroughGateway(
-            session_id="err-test", audit_conn=db_conn,
+            session_id=sid, audit_conn=db_conn,
         )
 
         def failing():
@@ -59,28 +70,28 @@ class TestGateway:
         with pytest.raises(ValueError, match="boom"):
             gw.execute("bad_tool", failing)
 
-        logs = get_session_log(db_conn, "err-test")
+        logs = get_session_log(db_conn, sid)
         assert len(logs) == 1
 
 
-class TestPingTool:
-    def test_ping_registered(self):
+class TestHealthCheckTool:
+    def test_health_check_registered(self):
         import asyncio
 
         from oprocess.server import mcp
 
         tools = asyncio.run(mcp.list_tools())
         names = {t.name for t in tools}
-        assert "ping" in names
+        assert "health_check" in names
 
-    def test_ping_description(self):
+    def test_health_check_description(self):
         import asyncio
 
         from oprocess.server import mcp
 
         tools = asyncio.run(mcp.list_tools())
-        ping = next(t for t in tools if t.name == "ping")
-        assert "health" in ping.description.lower()
+        hc = next(t for t in tools if t.name == "health_check")
+        assert "health" in hc.description.lower()
 
 
 class TestMultiTransport:
@@ -133,20 +144,22 @@ class TestStructuredLogging:
     def test_gateway_logs_tool_execute(self, caplog):
         import logging
 
+        sid = "e1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
         with caplog.at_level(logging.INFO, logger="oprocess"):
-            gw = ToolGatewayInterface(session_id="log-test")
+            gw = ToolGatewayInterface(session_id=sid)
             gw.execute("my_tool", lambda: 42)
         assert any("tool.execute" in r.message for r in caplog.records)
         log = next(r for r in caplog.records if "tool.execute" in r.message)
         assert log.tool == "my_tool"
-        assert log.session_id == "log-test"
+        assert log.session_id == sid
         assert hasattr(log, "ms")
 
     def test_passthrough_logs_tool_execute(self, caplog):
         import logging
 
+        sid = "f1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
         with caplog.at_level(logging.INFO, logger="oprocess"):
-            gw = PassthroughGateway(session_id="pt-log")
+            gw = PassthroughGateway(session_id=sid)
             gw.execute("search", lambda: [])
         assert any("tool.execute" in r.message for r in caplog.records)
 

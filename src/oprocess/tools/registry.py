@@ -1,6 +1,7 @@
 """Tool implementations — registered via register_tools(mcp).
 
-All MCP tool functions live here, keeping server.py lean.
+All non-search MCP tool functions live here, keeping server.py lean.
+Search tools are in search.py.
 """
 
 from __future__ import annotations
@@ -17,23 +18,22 @@ from oprocess.db.queries import (
     count_kpis,
     count_processes,
     get_ancestor_chain,
+    get_children,
     get_kpis_for_process,
     get_process,
-    get_processes_by_level,
     get_subtree,
-    search_processes,
     validate_lang,
 )
-from oprocess.gateway import PassthroughGateway, ToolResponse
+from oprocess.gateway import PassthroughGateway
 from oprocess.tools.export import build_responsibility_doc
 from oprocess.tools.helpers import (
-    apply_boundary,
     build_hierarchy_provenance,
     build_lookup_provenance,
-    build_search_provenance,
     compare_process_nodes,
     responsibilities_to_md,
 )
+from oprocess.tools.search import register_search_tools
+from oprocess.tools.serialization import response_to_json
 
 _gateway: PassthroughGateway | None = None
 
@@ -49,9 +49,6 @@ def _get_gateway() -> PassthroughGateway:
 # -- Tool annotations --
 _READ_ONLY = ToolAnnotations(
     readOnlyHint=True, idempotentHint=True, openWorldHint=False,
-)
-_READ_ONLY_OPEN = ToolAnnotations(
-    readOnlyHint=True, idempotentHint=True, openWorldHint=True,
 )
 
 # -- Reusable Annotated type aliases for tool parameters --
@@ -77,59 +74,10 @@ ProcessIdListOpt = Annotated[
 ]
 
 
-def _to_json(resp: ToolResponse) -> str:
-    """Serialize ToolResponse to JSON string for MCP."""
-    return json.dumps(
-        {
-            "result": resp.result,
-            "provenance_chain": resp.provenance_chain,
-            "session_id": resp.session_id,
-            "response_ms": resp.response_ms,
-        },
-        ensure_ascii=False,
-        indent=2,
-    )
-
-
 def register_tools(mcp) -> None:
     """Register all tool functions on the FastMCP instance."""
-
-    @mcp.tool(annotations=_READ_ONLY_OPEN)
-    def search_process(
-        query: Annotated[
-            str, Field(min_length=1, max_length=500),
-        ],
-        lang: Lang = "zh",
-        limit: Annotated[
-            int, Field(ge=1, le=50, description="Max results"),
-        ] = 10,
-        level: Annotated[
-            int | None, Field(ge=1, le=5, description="Level 1-5"),
-        ] = None,
-    ) -> str:
-        """Search the O'Process framework (2325 nodes).
-
-        Covers APQC PCF 7.4 + ITIL 4 + SCOR 12.0.
-        Supports semantic vector search with cosine similarity.
-        Returns matching nodes with id, name, description, score.
-        Low-confidence queries trigger BoundaryResponse."""
-        conn = get_shared_connection()
-        resp = _get_gateway().execute(
-            "search_process",
-            search_processes,
-            conn=conn,
-            query=query,
-            lang=lang,
-            limit=limit,
-            level=level,
-        )
-        results = resp.result if isinstance(resp.result, list) else []
-        resp.provenance_chain = build_search_provenance(
-            conn, results, lang,
-        )
-
-        apply_boundary(query, results, resp)
-        return _to_json(resp)
+    # Register search tools from search.py
+    register_search_tools(mcp)
 
     @mcp.tool(annotations=_READ_ONLY)
     def get_process_tree(
@@ -152,7 +100,11 @@ def register_tools(mcp) -> None:
             max_depth=max_depth,
         )
 
-        return _to_json(resp)
+        if resp.result is None:
+            msg = f"Process {process_id} not found"
+            raise ToolError(msg)
+
+        return response_to_json(resp)
 
     @mcp.tool(annotations=_READ_ONLY)
     def get_kpi_suggestions(
@@ -188,7 +140,7 @@ def register_tools(mcp) -> None:
                 conn, process_id, process["name_zh"],
             )
 
-        return _to_json(resp)
+        return response_to_json(resp)
 
     @mcp.tool(annotations=_READ_ONLY)
     def compare_processes(
@@ -206,7 +158,7 @@ def register_tools(mcp) -> None:
             process_ids=process_ids,
         )
 
-        return _to_json(resp)
+        return response_to_json(resp)
 
     @mcp.tool(annotations=_READ_ONLY)
     def get_responsibilities(
@@ -232,9 +184,7 @@ def register_tools(mcp) -> None:
                 raise ToolError(msg)
 
             chain = get_ancestor_chain(conn, process_id)
-            all_next = get_processes_by_level(
-                conn, process["level"] + 1,
-            )
+            direct_children = get_children(conn, process_id)
             nk, dk = f"name_{lang}", f"description_{lang}"
             data = {
                 "process": {
@@ -247,8 +197,7 @@ def register_tools(mcp) -> None:
                 ],
                 "sub_processes": [
                     {"id": c["id"], "name": c[nk]}
-                    for c in all_next
-                    if c.get("parent_id") == process_id
+                    for c in direct_children
                 ],
                 "domain": process["domain"],
             }
@@ -263,53 +212,7 @@ def register_tools(mcp) -> None:
             conn, process_id, lang,
         )
 
-        return _to_json(resp)
-
-    @mcp.tool(annotations=_READ_ONLY_OPEN)
-    def map_role_to_processes(
-        role_description: Annotated[
-            str,
-            Field(min_length=1, max_length=500),
-        ],
-        lang: Lang = "zh",
-        limit: Annotated[
-            int, Field(ge=1, le=50, description="Max matches"),
-        ] = 10,
-        industry: Annotated[
-            str | None,
-            Field(max_length=100, description="Industry tag"),
-        ] = None,
-    ) -> str:
-        """Map a job role to relevant process nodes.
-
-        Uses semantic search to find matching processes.
-        Returns ranked list with confidence scores.
-        Optionally filter by industry tag.
-        Low-confidence triggers BoundaryResponse."""
-        conn = get_shared_connection()
-        resp = _get_gateway().execute(
-            "map_role_to_processes",
-            search_processes,
-            conn=conn,
-            query=role_description,
-            lang=lang,
-            limit=limit,
-        )
-        results = resp.result if isinstance(resp.result, list) else []
-        if industry:
-            results = [
-                r for r in results
-                if industry.lower() in [
-                    t.lower() for t in r.get("tags", [])
-                ]
-            ]
-            resp.result = results
-        resp.provenance_chain = build_search_provenance(
-            conn, results, lang,
-        )
-
-        apply_boundary(role_description, results, resp)
-        return _to_json(resp)
+        return response_to_json(resp)
 
     @mcp.tool(annotations=_READ_ONLY)
     def export_responsibility_doc(
@@ -343,10 +246,10 @@ def register_tools(mcp) -> None:
             )
         resp.provenance_chain = all_prov
 
-        return _to_json(resp)
+        return response_to_json(resp)
 
     @mcp.tool(annotations=_READ_ONLY)
-    def ping() -> str:
+    def health_check() -> str:
         """Health check. Returns server status and data counts.
 
         Reports server name, total processes, and total KPIs."""
@@ -360,4 +263,3 @@ def register_tools(mcp) -> None:
             },
             ensure_ascii=False,
         )
-

@@ -39,6 +39,7 @@ _configure_logging()
 
 mcp = FastMCP(
     "O'Process",
+    version="0.3.0",
     instructions="AI-native process classification framework (OPF). "
     "Query 2325 processes + 3910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0.",
 )
