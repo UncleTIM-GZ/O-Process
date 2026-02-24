@@ -235,3 +235,29 @@ class TestSchemaCompliance:
         tools = asyncio.run(mcp.list_tools())
         for t in tools:
             assert t.description, f"Tool '{t.name}' has no description"
+
+    def test_tools_have_rich_descriptions(self):
+        import asyncio
+
+        from oprocess.server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        for t in tools:
+            assert len(t.description) >= 50, (
+                f"Tool '{t.name}' description too short "
+                f"({len(t.description)} chars < 50)"
+            )
+
+    def test_tools_have_annotations(self):
+        import asyncio
+
+        from oprocess.server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        for t in tools:
+            assert t.annotations is not None, (
+                f"Tool '{t.name}' missing annotations"
+            )
+            assert t.annotations.readOnlyHint is True, (
+                f"Tool '{t.name}' should be read-only"
+            )

@@ -35,7 +35,7 @@ def _to_json(data: object) -> str:
 def register_resources(mcp) -> None:
     """Register all MCP resource endpoints."""
 
-    @mcp.resource("oprocess://process/{process_id}")
+    @mcp.resource("oprocess://process/{process_id}", mime_type="application/json")
     def get_process_resource(process_id: str) -> str:
         """Get complete information for a single process node."""
         conn = get_shared_connection()
@@ -47,7 +47,7 @@ def register_resources(mcp) -> None:
             })
         return _to_json(process)
 
-    @mcp.resource("oprocess://category/list")
+    @mcp.resource("oprocess://category/list", mime_type="application/json")
     def get_category_list() -> str:
         """Get all top-level (L1) process categories."""
         conn = get_shared_connection()
@@ -62,7 +62,7 @@ def register_resources(mcp) -> None:
             for p in processes
         ])
 
-    @mcp.resource("oprocess://role/{role_name}")
+    @mcp.resource("oprocess://role/{role_name}", mime_type="application/json")
     def get_role_mapping(role_name: str) -> str:
         """Get process mappings for a role name via semantic search.
 
@@ -82,18 +82,18 @@ def register_resources(mcp) -> None:
             for r in results
         ])
 
-    @mcp.resource("oprocess://audit/session/{session_id}")
+    @mcp.resource("oprocess://audit/session/{session_id}", mime_type="application/json")
     def get_audit_session(session_id: str) -> str:
         """Get audit log entries for a specific session."""
         conn = get_shared_connection()
         return _to_json(get_session_log(conn, session_id))
 
-    @mcp.resource("oprocess://schema/sqlite")
+    @mcp.resource("oprocess://schema/sqlite", mime_type="text/plain")
     def get_schema() -> str:
         """Get the current SQLite schema definition."""
         return SCHEMA_SQL.strip()
 
-    @mcp.resource("oprocess://stats")
+    @mcp.resource("oprocess://stats", mime_type="application/json")
     def get_stats() -> str:
         """Get O'Process framework statistics."""
         conn = get_shared_connection()
