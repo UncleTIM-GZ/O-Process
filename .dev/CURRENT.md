@@ -2,32 +2,34 @@
 
 ## 状态
 
-P6 — MCP Spec 2025-11-25 全面合规审查修复（待开始）。
-计划文件: `docs/plans/2026-02-24-fix-p6-mcp-spec-2025-11-25-audit-plan.md`
+P7 — SHOULD/MAY 合规 + P2/P3 打磨（已完成）。
+计划文件: `docs/plans/2026-02-24-fix-p7-should-may-polish-plan.md`
 
-## P6 修复清单
+## P7 修复清单
 
 | ID | 修复内容 | 优先级 | 状态 |
 |------|----------|--------|------|
-| P6-1 | 版本号统一 0.3.0 | P0 | Done |
-| P6-2 | Gateway 单例统一 (消除双 session_id) | P0 | Done |
-| P6-3 | health_check 走 Gateway | P0 | Done |
-| P6-4 | README 同步更新 | P0 | Done |
-| P6-5 | destructiveHint=False 显式声明 | P1 | Done |
-| P6-6 | resources.py 测试覆盖率 → 80%+ | P1 | Done |
-| P6-7 | auth.py 测试覆盖率 → 80%+ | P1 | Done |
-| P6-8 | MCP Prompts (3 个引导模板) | P2 | Done |
-| P6-9 | MCP logging capability | P2 | Done |
-| P6-10 | atexit 线程安全修复 | P2 | Done |
+| S10 | Tool title 字段（8 个） | SHOULD | Done |
+| S11 | Prompt title 字段（3 个） | SHOULD | Done |
+| P2-1 | CLAUDE.md 向量模型描述更新 | P2 | Done |
+| P2-2 | 删除 get_recent_logs() 死代码 | P2 | Done |
+| P3-1 | vector_search 双重调用修复 | P3 | Done |
+| P3-2 | audit_log_enabled 配置生效 | P3 | Done |
+| P3-4 | 空 resources/ 目录清理 | P3 | Done |
 
 ## 审查基线
 
-- MUST 合规: 16/16 (100%)
-- SHOULD 合规: ~85%
-- 覆盖率: 94.50%
+- MUST 合规: 11/11 (100%)
+- SHOULD 合规: 12/12 (100%)
+- 覆盖率: 94.72%
 - 规范版本: MCP Spec 2025-11-25
 
 ## 历史
+
+### P6（已完成，commits cea0143 + a499cfa）
+- P6-1~P6-4: P0 正确性修复（版本 + gateway + health_check + README）
+- P6-5~P6-7: SHOULD 合规 + 测试覆盖率
+- P6-8~P6-10: MCP Prompts + logging + atexit 线程安全
 
 ### P5（已完成，commits 23292d1 + 7d2c44a + 323d9b1）
 - P5-1~P5-4: MCP error types + input validation + exception handling

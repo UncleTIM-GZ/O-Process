@@ -1,7 +1,7 @@
 ---
 title: "fix: P6 — MCP Spec 2025-11-25 全面合规审查修复"
 type: fix
-status: active
+status: completed
 date: 2026-02-24
 spec_version: "2025-11-25"
 ---
@@ -164,9 +164,9 @@ tests/test_tools/test_prompts.py    — Prompt 测试
 - [x] 总覆盖率 ≥ 85%
 
 ### P2 (Commit 3)
-- [ ] 3 个 MCP Prompts 可被客户端发现
-- [ ] Prompt 参数验证正确
-- [ ] Prompt 返回格式符合 MCP Spec
+- [x] 3 个 MCP Prompts 可被客户端发现
+- [x] Prompt 参数验证正确
+- [x] Prompt 返回格式符合 MCP Spec
 
 ## 涉及文件
 

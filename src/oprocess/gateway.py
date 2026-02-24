@@ -135,11 +135,14 @@ def get_shared_gateway() -> PassthroughGateway:
 
     Both registry.py and search.py share this instance so that
     all tool calls within a session use the same session_id.
+    Respects ``audit_log_enabled`` config to skip audit logging.
     """
     global _shared_gateway
     if _shared_gateway is None:
+        from oprocess.config import get_config
         from oprocess.db.connection import get_shared_connection
 
         conn = get_shared_connection()
-        _shared_gateway = PassthroughGateway(audit_conn=conn)
+        audit_conn = conn if get_config().get("audit_log_enabled", True) else None
+        _shared_gateway = PassthroughGateway(audit_conn=audit_conn)
     return _shared_gateway

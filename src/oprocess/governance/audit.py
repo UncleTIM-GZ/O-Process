@@ -98,14 +98,3 @@ def get_session_log(
         (session_id,),
     ).fetchall()
     return [dict(r) for r in rows]
-
-
-def get_recent_logs(
-    conn: sqlite3.Connection, limit: int = 50
-) -> list[dict]:
-    """Retrieve recent audit entries across all sessions."""
-    rows = conn.execute(
-        "SELECT * FROM session_audit_log ORDER BY timestamp DESC LIMIT ?",
-        (limit,),
-    ).fetchall()
-    return [dict(r) for r in rows]

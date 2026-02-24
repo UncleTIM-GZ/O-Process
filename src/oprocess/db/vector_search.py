@@ -63,7 +63,10 @@ def vector_search(
         pids,
     ).fetchall()
 
-    proc_map = {row_to_process(r)["id"]: row_to_process(r) for r in proc_rows}
+    proc_map = {}
+    for r in proc_rows:
+        p = row_to_process(r)
+        proc_map[p["id"]] = p
 
     results = []
     for vr in vec_rows:
