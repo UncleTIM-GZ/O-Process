@@ -85,6 +85,15 @@ def _create_vec_table(conn: sqlite3.Connection) -> None:
         logger.debug("sqlite-vec unavailable: %s", type(exc).__name__)
 
 
+def check_vec_available(conn: sqlite3.Connection) -> bool:
+    """Check if sqlite-vec extension is loaded and functional."""
+    try:
+        conn.execute("SELECT vec_version()")
+        return True
+    except Exception:
+        return False
+
+
 def _migrate_audit_request_id(conn: sqlite3.Connection) -> None:
     """Add request_id column + unique index if missing (v0.2.0)."""
     cols = {

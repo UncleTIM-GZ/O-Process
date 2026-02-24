@@ -13,7 +13,7 @@ from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from oprocess.db.connection import get_shared_connection
+from oprocess.db.connection import check_vec_available, get_shared_connection
 from oprocess.db.queries import (
     count_kpis,
     count_processes,
@@ -250,9 +250,10 @@ def register_tools(mcp) -> None:
 
     @mcp.tool(annotations=_READ_ONLY)
     def health_check() -> str:
-        """Health check. Returns server status and data counts.
+        """Health check for the O'Process MCP server.
 
-        Reports server name, total processes, and total KPIs."""
+        Returns JSON with status, server name, process/KPI counts,
+        and sqlite-vec extension availability."""
         conn = get_shared_connection()
         return json.dumps(
             {
@@ -260,6 +261,7 @@ def register_tools(mcp) -> None:
                 "server": "O'Process",
                 "total_processes": count_processes(conn),
                 "total_kpis": count_kpis(conn),
+                "vec_available": check_vec_available(conn),
             },
             ensure_ascii=False,
         )

@@ -82,6 +82,12 @@ class TestHealthCheckTool:
         assert data["total_processes"] >= 2325
         assert data["total_kpis"] >= 3910
 
+    def test_vec_available_field(self, _thread_safe_conn):
+        """P5-7: health_check reports sqlite-vec availability."""
+        data = _call("health_check")
+        assert "vec_available" in data
+        assert isinstance(data["vec_available"], bool)
+
 
 class TestSearchProcessTool:
     def test_returns_valid_structure(self, _thread_safe_conn):

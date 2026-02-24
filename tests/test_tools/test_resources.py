@@ -134,3 +134,14 @@ class TestStatsResource:
         }
         assert stats["total_processes"] >= 4
         assert stats["total_kpis"] >= 2
+
+
+class TestVecAvailable:
+    """P5-7: check_vec_available reports extension status."""
+
+    def test_without_vec(self, populated_db):
+        from oprocess.db.connection import check_vec_available
+
+        # populated_db is plain SQLite without sqlite-vec
+        result = check_vec_available(populated_db)
+        assert isinstance(result, bool)

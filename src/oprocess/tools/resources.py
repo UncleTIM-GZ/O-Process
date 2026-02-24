@@ -56,7 +56,9 @@ def register_resources(mcp) -> None:
 
     @mcp.resource("oprocess://process/{process_id}", mime_type="application/json")
     def get_process_resource(process_id: str) -> str:
-        """Get complete information for a single process node."""
+        """Get complete information for a single process node.
+
+        Returns JSON with id, name, description, domain, level, and tags."""
         _validate_process_id(process_id)
         conn = get_shared_connection()
         process = get_process(conn, process_id)
@@ -67,7 +69,9 @@ def register_resources(mcp) -> None:
 
     @mcp.resource("oprocess://category/list", mime_type="application/json")
     def get_category_list() -> str:
-        """Get all top-level (L1) process categories."""
+        """Get all top-level (L1) process categories.
+
+        Returns JSON array of 13 categories with id, name, and domain."""
         conn = get_shared_connection()
         processes = get_processes_by_level(conn, level=1)
         return to_json([
@@ -105,19 +109,25 @@ def register_resources(mcp) -> None:
 
     @mcp.resource("oprocess://audit/session/{session_id}", mime_type="application/json")
     def get_audit_session(session_id: str) -> str:
-        """Get audit log entries for a specific session."""
+        """Get audit log entries for a specific session.
+
+        Returns JSON array of tool call records with timestamps."""
         _validate_session_id(session_id)
         conn = get_shared_connection()
         return to_json(get_session_log(conn, session_id))
 
     @mcp.resource("oprocess://schema/sqlite", mime_type="text/plain")
     def get_schema() -> str:
-        """Get the current SQLite schema definition."""
+        """Get the current SQLite schema definition.
+
+        Returns plain-text SQL DDL for all tables and indexes."""
         return SCHEMA_SQL.strip()
 
     @mcp.resource("oprocess://stats", mime_type="application/json")
     def get_stats() -> str:
-        """Get O'Process framework statistics."""
+        """Get O'Process framework statistics.
+
+        Returns JSON with process/KPI counts, version, and data sources."""
         conn = get_shared_connection()
         return to_json({
             "total_processes": count_processes(conn),

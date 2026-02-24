@@ -14,6 +14,7 @@ import os
 
 from fastmcp import FastMCP
 
+from oprocess.config import get_config
 from oprocess.tools.rate_limit import RateLimitMiddleware
 from oprocess.tools.registry import register_tools
 from oprocess.tools.resources import register_resources
@@ -44,7 +45,11 @@ mcp = FastMCP(
     "Query 2325 processes + 3910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0.",
 )
 
-mcp.add_middleware(RateLimitMiddleware())
+_cfg = get_config()
+mcp.add_middleware(RateLimitMiddleware(
+    max_calls=int(_cfg["rate_limit_max_calls"]),
+    window_seconds=int(_cfg["rate_limit_window_seconds"]),
+))
 register_tools(mcp)
 register_resources(mcp)
 

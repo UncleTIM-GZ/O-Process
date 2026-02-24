@@ -13,6 +13,8 @@ _DEFAULTS = {
     "boundary_threshold": 0.45,
     "audit_log_enabled": True,
     "default_language": "zh",
+    "rate_limit_max_calls": 60,
+    "rate_limit_window_seconds": 60,
 }
 
 _config: dict | None = None
