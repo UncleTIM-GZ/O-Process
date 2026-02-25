@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import atexit
+import importlib.resources
 import logging
+import os
 import sqlite3
 from pathlib import Path
 
@@ -16,9 +18,22 @@ DEFAULT_DB_PATH = Path("data/oprocess.db")
 _shared_conn: sqlite3.Connection | None = None
 
 
+def _default_db_path() -> Path:
+    """Resolve database path: env var > cwd > package bundled."""
+    env = os.environ.get("OPROCESS_DB_PATH")
+    if env:
+        return Path(env)
+    cwd_path = Path("data/oprocess.db")
+    if cwd_path.exists():
+        return cwd_path
+    ref = importlib.resources.files("oprocess") / "data" / "oprocess.db"
+    with importlib.resources.as_file(ref) as p:
+        return Path(p)
+
+
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     """Get a SQLite connection with WAL mode and row factory."""
-    path = db_path or DEFAULT_DB_PATH
+    path = db_path or _default_db_path()
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")

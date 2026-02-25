@@ -260,3 +260,5 @@ src/oprocess/
 MIT — applies to all source code and AI-era original content.
 
 Third-party framework data (APQC PCF, ITIL, SCOR) is used under their respective licenses. See [Third-Party Attribution](#third-party-attribution) for details.
+
+<!-- mcp-name: io.github.UncleTIM-GZ/oprocess -->
