@@ -2,6 +2,8 @@
 
 AI-native process classification MCP Server. Query 2,325 processes and 3,910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0 + AI-era extensions.
 
+**Version**: 0.3.0 | **MCP Spec**: 2025-11-25 | **MUST**: 11/11 | **SHOULD**: 12/12 | **Coverage**: 94.72%
+
 ## Quick Start
 
 ```bash
@@ -51,7 +53,17 @@ Add to `claude_desktop_config.json`:
 
 All tools return `ToolResponse` JSON with `result`, `provenance_chain`, `session_id`, and `response_ms`.
 
-Invalid inputs raise `ToolError` with descriptive messages.
+Invalid inputs raise `ToolError` with descriptive messages. All tools are annotated with `readOnlyHint` and `idempotentHint`.
+
+## Prompts
+
+3 guided prompt templates for common workflows:
+
+| Prompt | Description | Parameters |
+|--------|-------------|------------|
+| `analyze_process` | Step-by-step process analysis workflow | `process_id`, `lang` |
+| `generate_job_description` | Role responsibility document generation | `process_ids`, `role_name`, `lang` |
+| `kpi_review` | KPI review and gap analysis workflow | `process_id`, `lang` |
 
 ## Resources
 
@@ -112,6 +124,8 @@ Server behavior can be tuned via `[tool.oprocess]` in `pyproject.toml`:
 | `rate_limit_max_calls` | `60` | Max tool calls per client per window |
 | `rate_limit_window_seconds` | `60` | Rate limit window duration (seconds) |
 
+Rate limiting is enforced per-client via `RateLimitMiddleware`. Exceeding the limit returns HTTP 429.
+
 ## Governance-Lite
 
 Transparent governance layer (non-blocking):
@@ -163,10 +177,37 @@ pytest
 ruff check . && pytest && pytest --benchmark-only
 ```
 
+## Project Structure
+
+```
+src/oprocess/
+├── server.py              # FastMCP entry point (stdio/SSE/HTTP)
+├── gateway.py             # ToolGatewayInterface + PassthroughGateway
+├── auth.py                # Bearer token auth middleware
+├── config.py              # pyproject.toml config loader
+├── validators.py          # Input validation + sanitization
+├── prompts.py             # 3 MCP prompt templates
+├── tools/
+│   ├── registry.py        # 7 tool registrations
+│   ├── search.py          # search_process + map_role_to_processes
+│   ├── resources.py       # 6 MCP resources
+│   ├── export.py          # Responsibility document builder
+│   ├── helpers.py         # Provenance + comparison utilities
+│   ├── serialization.py   # ToolResponse → JSON
+│   └── rate_limit.py      # Per-client rate limiter
+├── governance/
+│   ├── audit.py           # SessionAuditLog
+│   ├── boundary.py        # BoundaryResponse
+│   └── provenance.py      # ProvenanceChain
+└── db/
+    ├── connection.py       # SQLite + sqlite-vec connection
+    └── queries.py          # All SQL queries
+```
+
 ## Tech Stack
 
 - **Runtime**: Python 3.10+
-- **MCP Framework**: FastMCP 3.x
+- **MCP Framework**: FastMCP 2.x
 - **Validation**: Pydantic 2.x (`Annotated[..., Field(...)]`)
 - **Database**: SQLite + sqlite-vec (vector search)
 - **Embeddings**: gemini-embedding-001 (768-dim, via Google AI Studio)

@@ -26,6 +26,9 @@ Thumbs.db
 oprocess_content.xlsx
 docs/K014749_APQC*.xlsx
 
+# Deployment: contains real server IP/credentials, local-only
+deploy/
+
 # Build artifacts
 *.db
 *.sqlite
