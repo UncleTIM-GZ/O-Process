@@ -54,3 +54,5 @@ todos/
 .serena/
 .playwright-mcp/
 .coverage
+mcp-publisher
+.mcpregistry_*

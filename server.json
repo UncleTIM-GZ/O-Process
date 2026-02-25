@@ -1,13 +1,20 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.UncleTIM-GZ/oprocess",
-  "description": "AI-native process classification MCP Server. Query 2325 processes + 3910 KPIs from APQC PCF 7.4 + ITIL 4 + SCOR 12.0.",
+  "description": "AI-native process classification server. 2325 processes + 3910 KPIs from APQC, ITIL, SCOR.",
+  "repository": {
+    "url": "https://github.com/UncleTIM-GZ/O-Process",
+    "source": "github"
+  },
   "version": "0.3.0",
   "packages": [
     {
-      "registry_type": "pypi",
+      "registryType": "pypi",
       "identifier": "oprocess",
-      "version": "0.3.0"
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }
