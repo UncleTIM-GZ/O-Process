@@ -4,11 +4,43 @@ AI-native process classification MCP Server. Query 2,325 processes and 3,910 KPI
 
 **Version**: 0.3.0 | **MCP Spec**: 2025-11-25 | **MUST**: 11/11 | **SHOULD**: 12/12 | **Coverage**: 94.72%
 
+## What It Does
+
+O'Process gives AI assistants (Claude, GPT, etc.) real-time access to enterprise process knowledge. Connect it as an MCP Server, then ask natural language questions — the AI will call the right tools automatically.
+
+**Core capabilities:**
+
+- **Process Search** — "采购流程有哪些?" → returns matching process nodes with hierarchy, description, and confidence score
+- **Process Tree Navigation** — browse the 5-level taxonomy (L1 categories → L5 activities)
+- **KPI Recommendations** — get metrics for any process node (name, unit, formula, direction)
+- **Role-Process Mapping** — "HRBP manages which processes?" → ranked list with confidence scores
+- **Process Comparison** — side-by-side diff of 2+ process nodes across all attributes
+- **Responsibility Document** — generate complete job descriptions with provenance appendix
+
+## Why It Matters
+
+| Without O'Process | With O'Process |
+|-------------------|----------------|
+| Manually search APQC PCF Excel (1921 rows) | Natural language query, instant results |
+| Guess which KPIs apply to a process | Structured KPI suggestions from 3910 metrics |
+| Write job descriptions from scratch | Auto-generated with process-backed provenance |
+| Cross-reference APQC + ITIL + SCOR manually | Unified 2325-node taxonomy, one query |
+
+## Use Cases
+
+**Management Consulting** — Process diagnostics. A manufacturing company's delivery cycle is 30% slower than competitors. Use `search_process` to locate SCOR Plan/Deliver/Make nodes, then `get_kpi_suggestions` to build a measurement framework.
+
+**HR Digital Transformation** — Role-process mapping. CHRO needs to know what processes HR actually owns. Use `get_process_tree` on node `7.0` (Human Capital) to get the full L1→L4 hierarchy, then `map_role_to_processes` to map "HRBP" to standard processes.
+
+**Legal Due Diligence** — Compliance audit. Cross-border M&A requires checking 12+ regulatory domains. Use `search_process` to locate relevant PCF nodes (corporate governance, tax, labor, environmental), then `compare_processes` to identify coverage gaps.
+
+**Internal Audit** — KPI system design. Use `get_kpi_suggestions` for each process node, review coverage across efficiency/quality/cost/timeliness dimensions, identify missing metrics.
+
 ## Quick Start
 
 ```bash
-# Install (includes embedding + dev dependencies)
-uv sync --all-extras
+# Install
+uv sync
 
 # Run MCP Server (stdio — default)
 uv run python -m oprocess.server
@@ -96,10 +128,12 @@ When `OPROCESS_API_KEY` is not set, authentication is disabled (safe for stdio m
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GOOGLE_API_KEY` | For embedding | Google AI Studio API key (gemini-embedding-001) |
-| `OPROCESS_API_KEY` | For HTTP auth | Bearer token for SSE/HTTP transports |
+| `GOOGLE_API_KEY` | No | Enables semantic vector search (gemini-embedding-001). Without it, search falls back to SQL LIKE matching — all features still work. |
+| `OPROCESS_API_KEY` | No | Bearer token for SSE/HTTP transports. Not needed for stdio mode. |
 | `OPROCESS_ALLOWED_ORIGINS` | No | Comma-separated allowed origins for CORS (e.g. `http://localhost:3000,https://app.example.com`) |
 | `LOG_LEVEL` | No | Logging level (default: WARNING) |
+
+> **No API key is required to run the server.** All 8 tools work out of the box. Setting `GOOGLE_API_KEY` upgrades `search_process` and `map_role_to_processes` from text matching to semantic vector search.
 
 ## Logging
 
@@ -164,8 +198,8 @@ These fields are present in `schema.json` as required empty defaults. Content wi
 ## Development
 
 ```bash
-# Install all dependencies
-uv sync --all-extras
+# Install dependencies
+uv sync
 
 # Lint
 ruff check .
@@ -209,8 +243,8 @@ src/oprocess/
 - **Runtime**: Python 3.10+
 - **MCP Framework**: FastMCP 2.x
 - **Validation**: Pydantic 2.x (`Annotated[..., Field(...)]`)
-- **Database**: SQLite + sqlite-vec (vector search)
-- **Embeddings**: gemini-embedding-001 (768-dim, via Google AI Studio)
+- **Database**: SQLite + sqlite-vec (optional vector search)
+- **Embeddings**: gemini-embedding-001 (768-dim, optional — falls back to LIKE search)
 - **Packaging**: uv + hatchling
 
 ## License
