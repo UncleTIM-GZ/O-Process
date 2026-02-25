@@ -20,10 +20,12 @@ from docx.shared import Cm, Pt
 
 # Pre-compiled regex patterns
 _RE_CODE_BLOCK = re.compile(r"^```[^\n]*\n.*?\n```", re.MULTILINE | re.DOTALL)
+_RE_CODE_PLACEHOLDER = re.compile(r"__CODE_(\d+)__")
 _RE_CHAPTER = re.compile(r"^## (.+)$", re.MULTILINE)
 _RE_SUBSECTION = re.compile(r"^### (.+)$", re.MULTILINE)
 _RE_TABLE_SEP = re.compile(r"^\|[\s:-]+\|$")
 _RE_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_RE_ORDERED_LIST = re.compile(r"^\d+\.\s")
 
 
 def export_legal_report(md_path: str, output_path: str) -> dict:
@@ -132,10 +134,10 @@ def _is_oprocess_explanation(title: str) -> bool:
 
 
 def _restore(text: str, stash: list[str]) -> str:
-    """Restore stashed code blocks."""
-    for i, block in enumerate(stash):
-        text = text.replace(f"__CODE_{i}__", block)
-    return text
+    """Restore stashed code blocks (single-pass regex replacement)."""
+    if not stash:
+        return text
+    return _RE_CODE_PLACEHOLDER.sub(lambda m: stash[int(m.group(1))], text)
 
 
 # ========== Word Builder Layer ==========
@@ -255,8 +257,8 @@ def _render_markdown(doc: Document, md: str) -> None:
             p.paragraph_format.left_indent = Cm(1.0)
         elif stripped.startswith("- "):
             doc.add_paragraph(stripped[2:], style="List Bullet")
-        elif re.match(r"^\d+\.\s", stripped):
-            text = re.sub(r"^\d+\.\s", "", stripped)
+        elif _RE_ORDERED_LIST.match(stripped):
+            text = _RE_ORDERED_LIST.sub("", stripped, count=1)
             doc.add_paragraph(text, style="List Number")
         elif stripped == "---":
             continue  # Skip horizontal rules
