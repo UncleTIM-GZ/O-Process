@@ -120,18 +120,3 @@ tests/
 - **Branch naming**: `feature/<name>`, `fix/<name>`, `docs/<name>`
 - Conventional commit: `feat(tools): add search_process`
 
-## 开发工作流（Spec-Driven）
-
-**每次对话开始时必须先读取 `.dev/CURRENT.md`**，了解当前任务和上下文。
-
-- `.dev/PROGRESS.md` — 总体进度和 Spec 状态
-- `.dev/CURRENT.md` — 当前任务、检查点、已知问题
-- `.dev/TESTS.md` — 测试覆盖状态
-- `.dev/BUGS.md` — Bug 追踪
-- `specs/` — 功能规范文档
-
-## Ralph Integration
-
-- `.ralph/fix_plan.md` — 当前任务优先级
-- `.ralph/PROMPT.md` — Ralph loop 状态报告格式
-- Ralph loop 中必须输出 `---RALPH_STATUS---` 块

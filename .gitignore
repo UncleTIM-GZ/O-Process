@@ -32,3 +32,25 @@ deploy/
 # Build artifacts
 *.db
 *.sqlite
+
+# Blueprint & PRD documents (local-only)
+OProcess-Blueprint-*.docx
+OProcess-PRD-*.docx
+oprocess-icon-preview.png
+
+# Development process artifacts (cleaned up)
+.dev/
+.ralph/
+.security/
+docs/plans/
+docs/reviews/
+docs/brainstorms/
+docs_wiki/
+specs/
+todos/
+
+# Tools & IDE agent state
+.claude/
+.serena/
+.playwright-mcp/
+.coverage
