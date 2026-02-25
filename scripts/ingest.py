@@ -13,8 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from oprocess.db.connection import DEFAULT_DB_PATH, get_connection, init_schema
 from shared.io import read_json
+
+from oprocess.db.connection import DEFAULT_DB_PATH, get_connection, init_schema
 
 FRAMEWORK_PATH = Path("docs/oprocess-framework/framework.json")
 KPIS_PATH = Path("docs/oprocess-framework/kpis.json")
@@ -110,7 +111,7 @@ def main() -> None:
 
     actual_p = count_processes(conn)
     actual_k = count_kpis(conn)
-    print(f"\nVerification:")
+    print("\nVerification:")
     print(f"  Processes in DB: {actual_p}")
     print(f"  KPIs in DB: {actual_k}")
 

@@ -15,7 +15,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from shared.io import (
-    IdRegistry, load_framework, rebuild_registry, recount_nodes, write_json,
+    IdRegistry,
+    load_framework,
+    rebuild_registry,
+    recount_nodes,
+    write_json,
 )
 from shared.types import LocalizedText, ProcessNode
 

@@ -89,7 +89,11 @@ def _check_bilingual(nodes: list[dict]) -> list[str]:
         print("  PASS: All name.zh and name.en non-empty")
 
     if empty_desc > 0:
-        errors.append(f"FAIL: {empty_desc} empty description fields (violates schema minLength:1)")
+        msg = (
+            f"FAIL: {empty_desc} empty description fields "
+            "(violates schema minLength:1)"
+        )
+        errors.append(msg)
     else:
         print("  PASS: All description.zh and description.en non-empty")
     return errors
@@ -149,7 +153,11 @@ def _check_schema_validation(framework: dict) -> list[str]:
             jsonschema.validate(framework, schema)
             print("  PASS: JSON Schema validation (jsonschema)")
         except ImportError:
-            errors.append("WARN: No schema validator available (install fastjsonschema)")
+            msg = (
+                "WARN: No schema validator available "
+                "(install fastjsonschema)"
+            )
+            errors.append(msg)
         except jsonschema.ValidationError as e:
             errors.append(f"FAIL: Schema validation: {e.message[:200]}")
     except fastjsonschema.JsonSchemaValueException as e:
@@ -166,9 +174,17 @@ def _check_sources_mapping() -> list[str]:
         return errors
     mapping = read_json(path)
     if len(mapping) < MIN_PCF_ENTRIES:
-        errors.append(f"FAIL: sources_mapping has {len(mapping)} entries < {MIN_PCF_ENTRIES}")
+        msg = (
+            f"FAIL: sources_mapping has {len(mapping)} entries "
+            f"< {MIN_PCF_ENTRIES}"
+        )
+        errors.append(msg)
     else:
-        print(f"  PASS: sources_mapping = {len(mapping)} entries (>= {MIN_PCF_ENTRIES})")
+        msg = (
+            f"  PASS: sources_mapping = {len(mapping)} entries "
+            f"(>= {MIN_PCF_ENTRIES})"
+        )
+        print(msg)
     return errors
 
 
@@ -190,7 +206,11 @@ def _check_kpis(all_node_ids: set[str]) -> list[str]:
         if pid and pid not in all_node_ids:
             orphan_kpis += 1
             if orphan_kpis <= 3:
-                errors.append(f"FAIL: KPI {kpi['id']} process_id '{pid}' not in framework")
+                msg = (
+                    f"FAIL: KPI {kpi['id']} process_id '{pid}' "
+                    "not in framework"
+                )
+                errors.append(msg)
     if orphan_kpis > 3:
         errors.append(f"  ... and {orphan_kpis - 3} more orphaned KPI process_ids")
     if orphan_kpis == 0:

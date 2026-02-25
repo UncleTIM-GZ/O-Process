@@ -133,6 +133,20 @@ Transparent governance layer (non-blocking):
 
 Bilingual: Chinese (zh) + English (en).
 
+## Blueprint v1.0
+
+The framework schema reserves five structural pillars for future enhancement:
+
+| Pillar | Status | Description |
+|--------|--------|-------------|
+| `contract` | Reserved | Process contract definitions |
+| `genome` | Reserved | Process genome library |
+| `temporal` | Reserved | Temporal patterns |
+| `interference` | Reserved | Cross-process interference graph |
+| `outcomes` | Reserved | Outcome dependency graph |
+
+These fields are present in `schema.json` as required empty defaults. Content will be populated in v2.0.
+
 ## Development
 
 ```bash

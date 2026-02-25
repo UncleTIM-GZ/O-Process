@@ -7,17 +7,17 @@ then links KPI refs back into framework.json nodes.
 from __future__ import annotations
 
 import sys
+import warnings
 from collections import defaultdict
 from pathlib import Path
 
-import warnings
 from openpyxl import load_workbook
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from shared.io import read_json, write_json
 from shared.text import normalize_text
-from shared.types import LocalizedText, KPIEntry
+from shared.types import KPIEntry, LocalizedText
 
 # ── Constants ──────────────────────────────────────────────────────────
 
