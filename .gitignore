@@ -56,3 +56,5 @@ todos/
 .coverage
 mcp-publisher
 .mcpregistry_*
+.ralphrc
+compound-engineering.local.md
