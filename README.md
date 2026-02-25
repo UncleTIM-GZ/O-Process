@@ -170,16 +170,24 @@ Transparent governance layer (non-blocking):
 
 ## Data Sources
 
-| Source | Entries |
-|--------|---------|
-| APQC PCF 7.4 | 1,921 processes |
-| ITIL 4 | 141 nodes |
-| SCOR 12.0 | 164 nodes |
-| AI-era extensions | 99 nodes |
-| **Total** | **2,325 processes** |
-| KPI metrics | 3,910 |
+| Source | Entries | License |
+|--------|---------|---------|
+| APQC PCF 7.4 | 1,921 processes | Royalty-free with attribution |
+| ITIL 4 | 141 nodes | Practice names only (industry terms) |
+| SCOR 12.0 | 164 nodes | Open-access standard |
+| AI-era extensions | 99 nodes | Original (MIT) |
+| **Total** | **2,325 processes** | |
+| KPI metrics | 3,910 | From APQC PCF Metrics |
 
 Bilingual: Chinese (zh) + English (en).
+
+### Third-Party Attribution
+
+**APQC Process Classification Framework® (PCF)** is an open standard developed by [APQC](https://www.apqc.org), a nonprofit that promotes benchmarking and best practices worldwide. Used under APQC's royalty-free license for derivative works. To download the original PCF, visit [apqc.org/pcf](https://www.apqc.org/pcf).
+
+**ITIL®** is a registered trademark of PeopleCert group. This project references ITIL 4 practice names as industry-standard terminology. All descriptions are independently written and are not reproduced from ITIL publications.
+
+**SCOR®** (Supply Chain Operations Reference) is a product of [ASCM](https://www.ascm.org). This project references SCOR 12.0 process names as open-access industry-standard terminology. All descriptions are independently written.
 
 ## Blueprint v1.0
 
@@ -249,4 +257,6 @@ src/oprocess/
 
 ## License
 
-MIT
+MIT — applies to all source code and AI-era original content.
+
+Third-party framework data (APQC PCF, ITIL, SCOR) is used under their respective licenses. See [Third-Party Attribution](#third-party-attribution) for details.
