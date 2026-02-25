@@ -38,6 +38,12 @@ OProcess-Blueprint-*.docx
 OProcess-PRD-*.docx
 oprocess-icon-preview.png
 
+# Demo sensitive files (local-only)
+docs/demos/*.docx
+docs/demos/*.pdf
+data/*.db-shm
+data/*.db-wal
+
 # Development process artifacts (cleaned up)
 .dev/
 .ralph/
