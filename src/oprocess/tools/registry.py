@@ -54,11 +54,16 @@ def register_tools(mcp) -> None:
         max_depth: Annotated[
             int, Field(ge=1, le=5, description="Max depth"),
         ] = 4,
+        max_nodes: Annotated[
+            int,
+            Field(ge=10, le=500, description="Max nodes in response"),
+        ] = 200,
     ) -> str:
         """Retrieve a process node and its full subtree.
 
         Returns hierarchical JSON with id, name, description,
         and nested children up to max_depth levels.
+        Large trees are truncated at max_nodes with a warning.
         Use to explore the 5-level process taxonomy."""
         conn = get_shared_connection()
         resp = get_shared_gateway().execute(
@@ -67,10 +72,14 @@ def register_tools(mcp) -> None:
             conn=conn,
             root_id=process_id,
             max_depth=max_depth,
+            max_nodes=max_nodes,
         )
 
         if resp.result is None:
-            msg = f"Process {process_id} not found"
+            msg = (
+                f"Process '{process_id}' not found. "
+                f"L1 nodes use '.0' suffix (e.g. '1.0', '2.0')."
+            )
             raise ToolError(msg)
 
         return response_to_json(resp)
@@ -221,16 +230,29 @@ def register_tools(mcp) -> None:
         """Health check for the O'Process MCP server.
 
         Returns JSON with status, server name, process/KPI counts,
-        and sqlite-vec extension availability."""
+        sqlite-vec availability, and semantic search readiness."""
         conn = get_shared_connection()
 
         def _health():
+            import os
+
+            from oprocess.db.vector_search import has_vec_table
+
+            vec_ok = check_vec_available(conn)
+            has_api_key = bool(
+                os.environ.get("GOOGLE_API_KEY")
+                or os.environ.get("GEMINI_API_KEY")
+            )
+            has_vecs = has_vec_table(conn) if vec_ok else False
             return {
                 "status": "ok",
                 "server": "O'Process",
                 "total_processes": count_processes(conn),
                 "total_kpis": count_kpis(conn),
-                "vec_available": check_vec_available(conn),
+                "vec_available": vec_ok,
+                "semantic_search_available": (
+                    vec_ok and has_api_key and has_vecs
+                ),
             }
 
         resp = get_shared_gateway().execute("health_check", _health)

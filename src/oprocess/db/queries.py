@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 
 from oprocess.db.embedder import EmbedProvider, get_embedder
@@ -36,23 +37,60 @@ def get_children(conn: sqlite3.Connection, parent_id: str) -> list[dict]:
     return [row_to_process(r) for r in rows]
 
 
+_DEFAULT_MAX_NODES = 200
+
+
 def get_subtree(
-    conn: sqlite3.Connection, root_id: str, max_depth: int = 4
+    conn: sqlite3.Connection,
+    root_id: str,
+    max_depth: int = 4,
+    max_nodes: int = _DEFAULT_MAX_NODES,
 ) -> dict | None:
-    """Get process with nested children up to max_depth levels."""
+    """Get process with nested children up to max_depth levels.
+
+    Limits total nodes to max_nodes. When exceeded, remaining
+    children are omitted and a truncation warning is added.
+    """
     root = get_process(conn, root_id)
     if not root:
         return None
 
+    node_count = 0
+    truncated = False
+
     def _build(node: dict, depth: int) -> dict:
+        nonlocal node_count, truncated
+        node_count += 1
         if depth >= max_depth:
+            # Leaf at max depth — only mark truncated if it has children
+            children = get_children(conn, node["id"])
+            if children:
+                truncated = True
+            node["children"] = []
+            return node
+        if node_count >= max_nodes:
+            truncated = True
             node["children"] = []
             return node
         children = get_children(conn, node["id"])
-        node["children"] = [_build(c, depth + 1) for c in children]
+        built: list[dict] = []
+        for c in children:
+            if node_count >= max_nodes:
+                truncated = True
+                break
+            built.append(_build(c, depth + 1))
+        node["children"] = built
         return node
 
-    return _build(root, 0)
+    tree = _build(root, 0)
+    if truncated:
+        tree["_truncated"] = True
+        tree["_truncation_warning"] = (
+            f"Response truncated at {node_count} nodes "
+            f"(limit: {max_nodes}). Use a deeper process_id "
+            f"or reduce max_depth to see full details."
+        )
+    return tree
 
 
 def _get_embedder() -> EmbedProvider | None:
@@ -94,6 +132,47 @@ def _escape_like(s: str) -> str:
     return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+# Minimal English stopwords for LIKE fallback tokenization
+_EN_STOPWORDS = frozenset({
+    "a", "an", "the", "is", "are", "was", "were", "be", "been",
+    "in", "on", "at", "to", "for", "of", "and", "or", "not",
+    "it", "this", "that", "with", "from", "by", "as", "do",
+    "how", "what", "which", "who", "where", "when", "can",
+})
+
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _tokenize_query(query: str) -> list[str]:
+    """Tokenize search query into individual search tokens.
+
+    English: split on whitespace, filter stopwords, min 2 chars.
+    Chinese: extract 2-char bigrams (overlapping sliding window).
+    Mixed text: combine both strategies.
+    """
+    tokens: list[str] = []
+    seen: set[str] = set()
+    # English/ASCII tokens
+    for word in query.split():
+        cleaned = word.strip().lower()
+        is_cjk = _CJK_RE.search(cleaned)
+        if len(cleaned) >= 2 and cleaned not in _EN_STOPWORDS and not is_cjk:
+            if cleaned not in seen:
+                seen.add(cleaned)
+                tokens.append(cleaned)
+    # Chinese bigrams from CJK characters
+    cjk_chars = _CJK_RE.findall(query)
+    for i in range(len(cjk_chars) - 1):
+        bigram = cjk_chars[i] + cjk_chars[i + 1]
+        if bigram not in seen:
+            seen.add(bigram)
+            tokens.append(bigram)
+    # Fallback: use original query if nothing extracted
+    if not tokens:
+        tokens = [query.strip()]
+    return tokens
+
+
 def _search_like(
     conn: sqlite3.Connection,
     query: str,
@@ -101,24 +180,54 @@ def _search_like(
     limit: int,
     level: int | None,
 ) -> list[dict]:
-    """Text-based LIKE search (fallback)."""
-    col = f"name_{lang}"
-    desc_col = f"description_{lang}"
-    pattern = f"%{_escape_like(query)}%"
-    conditions = [
-        f"({col} LIKE ? ESCAPE '\\' OR {desc_col} LIKE ? ESCAPE '\\')",
-    ]
-    params: list = [pattern, pattern]
+    """Token-based LIKE search with OR matching.
+
+    Tokenizes query, matches any token against name/description,
+    ranks results by number of matched tokens (descending).
+    """
+    tokens = _tokenize_query(query)
+    # Whitelist column names to prevent SQL injection via lang param
+    col = "name_zh" if lang == "zh" else "name_en"
+    desc_col = "description_zh" if lang == "zh" else "description_en"
+
+    or_parts: list[str] = []
+    score_parts: list[str] = []
+    params: list = []
+    for token in tokens:
+        pat = f"%{_escape_like(token)}%"
+        clause = (
+            f"({col} LIKE ? ESCAPE '\\' "
+            f"OR {desc_col} LIKE ? ESCAPE '\\')"
+        )
+        or_parts.append(clause)
+        score_parts.append(f"(CASE WHEN {clause} THEN 1 ELSE 0 END)")
+        params.extend([pat, pat])
+
+    score_expr = " + ".join(score_parts)
+    # Each token generates 2 LIKE placeholders (name + desc).
+    # The same placeholders appear twice in the SQL:
+    #   1) in SELECT's CASE score expressions
+    #   2) in WHERE's OR conditions
+    # So params must be duplicated: [score params...] + [where params...]
+    all_params = list(params) + list(params)
+
+    where = f"({' OR '.join(or_parts)})"
     if level is not None:
-        conditions.append("level = ?")
-        params.append(level)
-    params.append(limit)
-    where = " AND ".join(conditions)
-    rows = conn.execute(
-        f"SELECT * FROM processes WHERE {where} ORDER BY level, id LIMIT ?",
-        params,
-    ).fetchall()
-    return [row_to_process(r) for r in rows]
+        where += " AND level = ?"
+        all_params.append(level)
+    all_params.append(limit)
+
+    sql = (
+        f"SELECT *, ({score_expr}) AS match_score "
+        f"FROM processes WHERE {where} "
+        f"ORDER BY match_score DESC, level, id LIMIT ?"
+    )
+    rows = conn.execute(sql, all_params).fetchall()
+    results = [row_to_process(r) for r in rows]
+    # Strip internal match_score from output
+    for r in results:
+        r.pop("match_score", None)
+    return results
 
 
 def get_kpis_for_process(

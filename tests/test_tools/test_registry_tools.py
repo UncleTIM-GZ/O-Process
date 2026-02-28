@@ -84,6 +84,12 @@ class TestHealthCheckTool:
         assert "vec_available" in data
         assert isinstance(data["vec_available"], bool)
 
+    def test_semantic_search_field(self, _thread_safe_conn):
+        """health_check reports semantic search availability."""
+        data = _call("health_check")
+        assert "semantic_search_available" in data
+        assert isinstance(data["semantic_search_available"], bool)
+
 
 class TestSearchProcessTool:
     def test_returns_valid_structure(self, _thread_safe_conn):

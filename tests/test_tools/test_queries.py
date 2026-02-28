@@ -7,6 +7,7 @@ from fastmcp.exceptions import ToolError
 
 from oprocess.db.queries import (
     _escape_like,
+    _tokenize_query,
     build_path_string,
     count_kpis,
     count_processes,
@@ -60,6 +61,37 @@ class TestGetSubtree:
     def test_not_found(self, populated_db):
         assert get_subtree(populated_db, "99.99") is None
 
+    def test_max_nodes_truncation(self, populated_db):
+        """Subtree truncates when exceeding max_nodes."""
+        tree = get_subtree(populated_db, "1.0", max_depth=4, max_nodes=1)
+        assert tree is not None
+        assert tree.get("_truncated") is True
+        assert "_truncation_warning" in tree
+        assert tree["children"] == []
+
+    def test_max_nodes_sufficient(self, populated_db):
+        """No truncation when nodes fit within limit."""
+        tree = get_subtree(populated_db, "1.0", max_depth=4, max_nodes=100)
+        assert tree is not None
+        assert "_truncated" not in tree
+
+    def test_max_nodes_strict_limit(self, populated_db):
+        """Node count must not exceed max_nodes."""
+        tree = get_subtree(populated_db, "1.0", max_depth=4, max_nodes=2)
+        assert tree is not None
+
+        def count_nodes(node):
+            return 1 + sum(count_nodes(c) for c in node.get("children", []))
+
+        assert count_nodes(tree) <= 2
+
+    def test_leaf_at_max_depth_no_false_truncation(self, populated_db):
+        """Leaf node at max_depth should not trigger truncation warning."""
+        # 1.1 has no children, so depth limit should not cause truncation
+        tree = get_subtree(populated_db, "1.1", max_depth=1)
+        assert tree is not None
+        assert "_truncated" not in tree
+
 
 class TestSearch:
     def test_search_zh_like_fallback(self, populated_db):
@@ -93,6 +125,31 @@ class TestSearch:
         results = search_processes(populated_db, "管理", level=1)
         for r in results:
             assert r["level"] == 1
+
+    def test_multiword_zh_like_fallback(self, populated_db):
+        """Multi-word Chinese query should match via bigrams."""
+        # "制定愿景战略" contains bigrams "制定", "定愿", "愿景", "景战", "战略"
+        # Process 1.0 name_zh is "制定愿景与战略"
+        results = search_processes(populated_db, "制定愿景战略", lang="zh")
+        assert len(results) >= 1
+        ids = [r["id"] for r in results]
+        assert "1.0" in ids
+
+    def test_multiword_en_like_fallback(self, populated_db):
+        """Multi-word English query should match via word tokens."""
+        results = search_processes(
+            populated_db, "Develop Vision Strategy", lang="en",
+        )
+        assert len(results) >= 1
+        ids = [r["id"] for r in results]
+        assert "1.0" in ids
+
+    def test_natural_language_en_like(self, populated_db):
+        """Natural language with stopwords should still match."""
+        results = search_processes(
+            populated_db, "how to manage IT systems", lang="en",
+        )
+        assert len(results) >= 1
 
 
 class TestKPIs:
@@ -185,3 +242,44 @@ class TestEscapeLike:
         """Searching for literal '%' should not match everything."""
         results = search_processes(populated_db, "%", lang="zh")
         assert len(results) == 0
+
+
+class TestTokenizeQuery:
+    """Tests for the query tokenization helper."""
+
+    def test_english_tokens(self):
+        tokens = _tokenize_query("how to manage IT systems")
+        assert "manage" in tokens
+        assert "systems" in tokens
+        assert "to" not in tokens  # stopword
+
+    def test_chinese_bigrams(self):
+        tokens = _tokenize_query("供应链管理")
+        assert "供应" in tokens
+        assert "应链" in tokens
+        assert "链管" in tokens
+        assert "管理" in tokens
+
+    def test_mixed_text(self):
+        tokens = _tokenize_query("AI 智能运维")
+        assert "智能" in tokens
+        assert "能运" in tokens
+        assert "运维" in tokens
+
+    def test_single_cjk_char_fallback(self):
+        tokens = _tokenize_query("管")
+        assert tokens == ["管"]
+
+    def test_empty_after_stopwords(self):
+        tokens = _tokenize_query("a")
+        assert tokens == ["a"]
+
+    def test_dedup_english(self):
+        """Duplicate English words should appear only once."""
+        tokens = _tokenize_query("manage manage systems")
+        assert tokens.count("manage") == 1
+
+    def test_dedup_chinese_bigrams(self):
+        """Repeated CJK bigrams should appear only once."""
+        tokens = _tokenize_query("管理管理")
+        assert tokens.count("管理") == 1
