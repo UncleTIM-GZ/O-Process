@@ -1,0 +1,1 @@
+# AI Impact Scanner tests.
